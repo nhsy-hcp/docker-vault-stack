@@ -1,0 +1,16 @@
+services:
+  tfc-agent:
+    image: hashicorp/tfc-agent:latest
+    container_name: tfc-agent
+    platform: linux/amd64
+    restart: unless-stopped
+    env_file:
+      - .env # Contains TFC_AGENT_TOKEN
+    environment:
+      TFC_AGENT_NAME: localhost-agent
+      TFC_AGENT_SINGLE: true
+
+networks:
+  default:
+    name: vault
+    external: true

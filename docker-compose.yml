@@ -1,0 +1,88 @@
+services:
+  vault:
+    image: hashicorp/vault-enterprise:1.18-ent
+    container_name: ${COMPOSE_PROJECT_NAME}_vault
+    restart: no
+    ports:
+      - "8200:8200"
+    env_file:
+      - .env # Contains VAULT_ADDR, VAULT_LICENSE
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./volumes/vault/raft.hcl:/vault/config/raft.hcl:ro
+      - vault-data:/vault/file  # Need this volume to fudge permissions error
+      - vault-logs:/vault/logs
+    command: server
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ${COMPOSE_PROJECT_NAME}_grafana
+    restart: no
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./volumes/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+#      - ./volumes/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./volumes/grafana/vault_dashboard.json:/var/lib/grafana/dashboards/vault_dashboard.json:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    depends_on:
+      - prometheus
+      - loki
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ${COMPOSE_PROJECT_NAME}_prometheus
+    restart: no
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./volumes/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  loki:
+    image: grafana/loki:latest
+    container_name: ${COMPOSE_PROJECT_NAME}_loki
+    restart: no
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./volumes/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki/data
+      - ./volumes/loki/loki_perm_fix.sh:/loki/loki_perm_fix.sh:ro
+#    command: -config.file=/etc/loki/loki.yml
+    entrypoint: /loki/loki_perm_fix.sh
+    user: root # Required for permission fix as Loki runs as user Loki by default
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: ${COMPOSE_PROJECT_NAME}_promtail
+    restart: no
+    volumes:
+      - ./volumes/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - promtail-data:/promtail
+      - vault-logs:/mnt/vault-logs
+    command: -config.file=/etc/promtail/promtail.yml
+    depends_on:
+      - loki
+
+networks:
+  default:
+    name: ${COMPOSE_PROJECT_NAME}
+
+volumes:
+  loki-data:
+  grafana-data:
+  prometheus-data:
+  promtail-data:
+  vault-data:
+  vault-logs:

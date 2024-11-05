@@ -1,0 +1,78 @@
+# https://taskfile.dev
+version: '3'
+
+env:
+  VAULT_ADDR: '{{.VAULT_ADDR}}'
+  VAULT_TOKEN: '{{.VAULT_TOKEN}}'
+
+tasks:
+  default:
+    cmds:
+      - task: up
+      - task: status
+
+  up:
+    preconditions:
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose up -d --pull=always
+      - sleep 5
+    silent: true
+
+  down:
+    cmds:
+      - task: stop
+
+  restart:
+    cmds:
+      - docker compose restart vault
+
+  status:
+    cmds:
+      - vault status
+
+  init:
+    cmds:
+      - ./scripts/00_vault_init.sh
+
+  unseal:
+    cmds:
+      - ./scripts/20_vault_unseal.sh
+
+  backup:
+    cmds:
+      - vault operator raft snapshot save backup-`date +"%Y%m%d-%H%M"`.snap
+
+  rm:
+    cmds:
+      - docker compose rm -sfv
+      - docker volume rm {{.STACK_NAME }}_grafana-data
+      - docker volume rm {{.STACK_NAME }}_loki-data
+      - docker volume rm {{.STACK_NAME }}_prometheus-data
+      - docker volume rm {{.STACK_NAME }}_promtail-data
+      - docker volume rm {{.STACK_NAME }}_vault-data
+      - docker volume rm {{.STACK_NAME }}_vault-logs
+    vars:
+      STACK_NAME:
+        sh: basename "`pwd`"
+
+  benchmark:
+    cmds:
+      - vault-benchmark run -config=./benchmark/config.hcl
+
+  metrics:
+      cmds:
+        - |
+          curl -s --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics?format=prometheus"
+          
+  logs-vault:
+    cmds:
+      - docker compose logs -f vault
+
+  logs:
+    cmds:
+      - docker compose logs -f
+
+  stop:
+    cmds:
+      - docker compose stop

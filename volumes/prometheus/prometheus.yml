@@ -1,0 +1,8 @@
+scrape_configs:
+  - job_name: vault
+    metrics_path: /v1/sys/metrics
+    params:
+      format: ['prometheus']
+    scheme: http
+    static_configs:
+    - targets: ['vault:8200']
