@@ -21,7 +21,7 @@ export VAULT_LICENSE=
 ```
 
 ## Usage
-`Taskfile.yml` contains automation commands to manage the stack.
+[Taskfile.yml](Taskfile.yml) contains automation commands to manage the stack.
 
 Launch the docker compose stack with the following command:
 ```bash
@@ -57,6 +57,3 @@ Execute vault benchmark to test the performance of the vault and generate vault 
 vault namespace create vault-benchmark
 task benchmark
 ```
-
-## TODO
-- [ ] Add auto provisioning vault dashboard to grafana

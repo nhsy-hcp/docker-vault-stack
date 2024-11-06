@@ -17,6 +17,10 @@ tasks:
     cmds:
       - docker compose up -d --pull=always
       - sleep 5
+      - |
+        echo "Grafana: http://localhost:3000"
+        echo "Prometheus: http://localhost:9090"
+        echo "Vault: http://localhost:8200"
     silent: true
 
   down:
@@ -52,6 +56,7 @@ tasks:
       - docker volume rm {{.STACK_NAME }}_promtail-data
       - docker volume rm {{.STACK_NAME }}_vault-data
       - docker volume rm {{.STACK_NAME }}_vault-logs
+    ignore_error: true
     vars:
       STACK_NAME:
         sh: basename "`pwd`"

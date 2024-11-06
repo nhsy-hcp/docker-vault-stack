@@ -12,5 +12,5 @@ services:
 
 networks:
   default:
-    name: vault
+    name: docker-vault-stack
     external: true
