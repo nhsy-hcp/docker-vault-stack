@@ -1,9 +1,8 @@
 # https://taskfile.dev
 version: '3'
 
-env:
-  VAULT_ADDR: '{{.VAULT_ADDR}}'
-  VAULT_TOKEN: '{{.VAULT_TOKEN}}'
+dotenv:
+  - .env
 
 tasks:
   default:
@@ -13,6 +12,7 @@ tasks:
 
   up:
     preconditions:
+      - test -f .env
       - test -f docker-compose.yml
     cmds:
       - docker compose up -d --pull=always
