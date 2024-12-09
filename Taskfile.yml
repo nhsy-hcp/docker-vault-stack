@@ -15,7 +15,7 @@ tasks:
       - test -f .env
       - test -f docker-compose.yml
     cmds:
-      - docker compose up -d --pull=always
+      - docker compose up -d --pull=missing
       - sleep 5
       - |
         echo "Grafana: http://localhost:3000"
