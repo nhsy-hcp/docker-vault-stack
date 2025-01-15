@@ -48,6 +48,7 @@ tasks:
       - vault operator raft snapshot save backup-`date +"%Y%m%d-%H%M"`.snap
 
   rm:
+    aliases: ["clean"]
     cmds:
       - docker compose rm -sfv
       - docker volume rm {{.STACK_NAME }}_grafana-data
@@ -81,3 +82,7 @@ tasks:
   stop:
     cmds:
       - docker compose stop
+  ui:
+    cmds:
+      - open http://localhost:8200
+      - ./scripts/10_vault_vars.sh

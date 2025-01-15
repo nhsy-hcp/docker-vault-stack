@@ -9,15 +9,20 @@ This repository contains a docker compose stack with the following services:
 - vault enterprise with raft backend
 
 ## Pre-requisites
-Install `taskfile` with the following command:
+Install `taskfile` and `jq` with the following command:
 ```shell
-  brew install go-task
+  brew install go-task jq
+```
+
+Clone git repository:
+```shell
+git clone https://github.com/nhsy-hcp/docker-vault-stack.git
 ```
 
 Create a `.env` file in the root folder with the following content:
 ```shell
 export VAULT_ADDR=http://127.0.0.1:8200
-export VAULT_LICENSE=
+export VAULT_LICENSE=INSERT_LICENSE_HERE
 ```
 
 ## Usage
