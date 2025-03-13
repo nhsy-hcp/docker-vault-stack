@@ -6,9 +6,10 @@ dotenv:
 
 tasks:
   default:
+    aliases: ["all"]
     cmds:
       - task: up
-      - task: status
+      - task: unseal
 
   up:
     preconditions:
@@ -82,6 +83,23 @@ tasks:
   stop:
     cmds:
       - docker compose stop
+
+  agent-up:
+    dir: ./tfc-agent
+    preconditions:
+      - test -f .env
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose up -d --pull=missing
+
+  agent-down:
+    dir: ./tfc-agent
+    preconditions:
+      - test -f .env
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose stop
+
   ui:
     cmds:
       - open http://localhost:8200

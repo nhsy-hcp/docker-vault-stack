@@ -4,6 +4,7 @@ set -o pipefail
 export VAULT_ADDR=http://127.0.0.1:8200
 vault status
 vault operator init -format=json | tee vault-init.json
+sed -i '' "s/VAULT_TOKEN=.*/VAULT_TOKEN=$(jq -r '.root_token' vault-init.json)/g" .env
 echo "Waiting for Vault to initialise..."
 sleep 20
 echo "Unsealing vault..."

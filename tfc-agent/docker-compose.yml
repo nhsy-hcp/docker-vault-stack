@@ -1,7 +1,7 @@
 services:
   tfc-agent:
     image: hashicorp/tfc-agent:latest
-    container_name: tfc-agent
+#    container_name: tfc-agent
     platform: linux/amd64
     restart: unless-stopped
     env_file:
@@ -9,7 +9,8 @@ services:
     environment:
       TFC_AGENT_NAME: localhost-agent
       TFC_AGENT_SINGLE: true
-
+    deploy:
+      replicas: 2
 networks:
   default:
     name: docker-vault-stack

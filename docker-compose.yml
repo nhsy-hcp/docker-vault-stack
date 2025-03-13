@@ -1,6 +1,6 @@
 services:
   vault:
-    image: hashicorp/vault-enterprise:1.18-ent
+    image: hashicorp/vault-enterprise:1.19-ent
     container_name: ${COMPOSE_PROJECT_NAME}_vault
     restart: no
     ports:

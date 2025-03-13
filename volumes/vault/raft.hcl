@@ -1,7 +1,7 @@
 ui                = true
 disable_mlock     = true
-default_lease_ttl = "24h"
-max_lease_ttl     = "168h"
+default_lease_ttl = "1h"
+max_lease_ttl     = "24h"
 
 api_addr          = "http://vault:8200"
 cluster_addr      = "http://vault:8201"
