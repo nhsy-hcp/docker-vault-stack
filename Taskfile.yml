@@ -24,6 +24,19 @@ tasks:
         echo "Vault: http://localhost:8200"
     silent: true
 
+  vault-up:
+    preconditions:
+      - test -f .env
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose up vault -d --pull=missing
+      - sleep 5
+      - |
+        echo "Grafana: http://localhost:3000"
+        echo "Prometheus: http://localhost:9090"
+        echo "Vault: http://localhost:8200"
+    silent: true
+
   down:
     cmds:
       - task: stop
@@ -104,3 +117,8 @@ tasks:
     cmds:
       - open http://localhost:8200
       - ./scripts/10_vault_vars.sh
+
+  pull:
+    cmds:
+      - docker compose pull
+    silent: true

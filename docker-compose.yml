@@ -1,12 +1,19 @@
+# Recommend creating a .env file in the root directory for these:
+# VAULT_VERSION=1.19-ent
+# VAULT_LOG_LEVEL=info
+# VAULT_PORT=8200
+
 services:
   vault:
-    image: hashicorp/vault-enterprise:1.19-ent
+    image: hashicorp/vault-enterprise:${VAULT_VERSION:-1.19-ent}
     container_name: ${COMPOSE_PROJECT_NAME}_vault
     restart: no
     ports:
-      - "8200:8200"
+      - "${VAULT_PORT:-8200}:8200"
     env_file:
       - .env # Contains VAULT_ADDR, VAULT_LICENSE
+    environment:
+      VAULT_LOG_LEVEL: ${VAULT_LOG_LEVEL:-info} # Default to 'info', allow override via .env
     cap_add:
       - IPC_LOCK
     volumes:
@@ -14,9 +21,15 @@ services:
       - vault-data:/vault/file  # Need this volume to fudge permissions error
       - vault-logs:/vault/logs
     command: server
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8200/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s # Give Vault time to start before checking
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:${GRAFANA_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_grafana
     restart: no
     ports:
@@ -34,7 +47,7 @@ services:
       - loki
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_prometheus
     restart: no
     ports:
@@ -50,7 +63,7 @@ services:
       - '--web.enable-lifecycle'
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:${LOKI_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_loki
     restart: no
     ports:
@@ -64,7 +77,7 @@ services:
     user: root # Required for permission fix as Loki runs as user Loki by default
 
   promtail:
-    image: grafana/promtail:latest
+    image: grafana/promtail:${PROMTAIL_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_promtail
     restart: no
     volumes:
