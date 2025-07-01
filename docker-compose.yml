@@ -5,9 +5,9 @@
 
 services:
   vault:
-    image: hashicorp/vault-enterprise:${VAULT_VERSION:-1.19-ent}
+    image: hashicorp/vault-enterprise:${VAULT_VERSION:-1.20-ent}
     container_name: ${COMPOSE_PROJECT_NAME}_vault
-    restart: no
+    restart: unless-stopped
     ports:
       - "${VAULT_PORT:-8200}:8200"
     env_file:
@@ -31,7 +31,7 @@ services:
   grafana:
     image: grafana/grafana:${GRAFANA_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_grafana
-    restart: no
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
@@ -49,7 +49,7 @@ services:
   prometheus:
     image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_prometheus
-    restart: no
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
@@ -65,7 +65,7 @@ services:
   loki:
     image: grafana/loki:${LOKI_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_loki
-    restart: no
+    restart: unless-stopped
     ports:
       - "3100:3100"
     volumes:
@@ -79,7 +79,7 @@ services:
   promtail:
     image: grafana/promtail:${PROMTAIL_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_promtail
-    restart: no
+    restart: unless-stopped
     volumes:
       - ./volumes/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
       - promtail-data:/promtail

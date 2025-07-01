@@ -32,8 +32,6 @@ tasks:
       - docker compose up vault -d --pull=missing
       - sleep 5
       - |
-        echo "Grafana: http://localhost:3000"
-        echo "Prometheus: http://localhost:9090"
         echo "Vault: http://localhost:8200"
     silent: true
 
@@ -121,4 +119,11 @@ tasks:
   pull:
     cmds:
       - docker compose pull
+    silent: true
+
+  dev:
+    preconditions:
+      - test -f .env
+    cmds:
+      - docker run --rm -p 8200:8200 --cap-add=IPC_LOCK -e VAULT_LICENSE=$VAULT_LICENSE hashicorp/vault-enterprise:latest server -dev -dev-root-token-id=root -dev-listen-address="0.0.0.0:8200"
     silent: true

@@ -1,3 +1,7 @@
 **/.env
 .idea/
 vault-init.json
+
+**/*.bak
+**/.terraform
+**/terraform.tfstate
