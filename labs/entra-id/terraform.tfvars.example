@@ -1,0 +1,35 @@
+azure_groups = {
+  "vault-admin" = {
+    display_name = "vault-admin"
+    description  = "Vault admins group"
+  }
+  "vault-user" = {
+    display_name = "vault-user"
+    description  = "General Vault users group"
+  }
+  "vault-bu01-reader" = {
+    display_name = "vault-bu01-reader"
+    description  = "Vault BU01 readers group"
+  }
+  "vault-bu02-reader" = {
+    display_name = "vault-bu02-reader"
+    description  = "Vault BU02 readers group"
+  }
+}
+
+azure_users = {
+  "testuser1" = {
+    display_name      = "Test User 1"
+    given_name        = "Test"
+    surname           = "User 1"
+    password          = "__REPLACE__"
+    group_memberships = ["vault-user", "vault-bu01-reader"]
+  }
+  "testuser2" = {
+    display_name      = "Test User 2"
+    given_name        = "Test"
+    surname           = "User 2"
+    password          = "__REPLACE__"
+    group_memberships = ["vault-user", "vault-bu02-reader"]
+  }
+}
