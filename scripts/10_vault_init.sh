@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o pipefail
 
-export VAULT_ADDR=http://127.0.0.1:8200
+export VAULT_ADDR=https://127.0.0.1:8200
 vault status
 
 if [ -f "vault-init.json" ]; then
@@ -24,7 +24,4 @@ vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[0]')
 vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[1]')
 vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[2]')
 vault status
-vault audit enable -path="audit_log" file file_path=/vault/logs/vault_audit.log
-vault audit enable -path="audit_stdout" file file_path=stdout
-vault write sys/quotas/config enable_rate_limit_audit_logging=true
-echo "Vault initialised, unsealed and audit logs enabled"
+

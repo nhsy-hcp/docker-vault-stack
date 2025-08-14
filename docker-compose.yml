@@ -18,6 +18,8 @@ services:
       - IPC_LOCK
     volumes:
       - ./volumes/vault/raft.hcl:/vault/config/raft.hcl:ro
+      - ./volumes/vault/localhost.crt:/vault/config/tls.crt:ro
+      - ./volumes/vault/localhost.key:/vault/config/tls.key:ro
       - vault-data:/vault/file  # Need this volume to fudge permissions error
       - vault-logs:/vault/logs
     command: server
@@ -54,6 +56,7 @@ services:
       - "9090:9090"
     volumes:
       - ./volumes/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -87,6 +90,21 @@ services:
     command: -config.file=/etc/promtail/promtail.yml
     depends_on:
       - loki
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: ${COMPOSE_PROJECT_NAME}_node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
 
 networks:
   default:

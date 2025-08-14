@@ -49,14 +49,17 @@ tasks:
 
   init:
     cmds:
-      - ./scripts/00_vault_init.sh
+      - ./scripts/10_vault_init.sh
 
   unseal:
     cmds:
       - ./scripts/20_vault_unseal.sh
+      - vault token renew $(cat ./volumes/prometheus/prometheus-token)
+      - docker compose restart prometheus
 
   backup:
     cmds:
+      - echo $VAULT_CACERT
       - vault operator raft snapshot save backup-`date +"%Y%m%d-%H%M"`.snap
 
   rm:
@@ -85,7 +88,7 @@ tasks:
           
   logs-vault:
     cmds:
-      - docker compose logs -f vault
+      - docker compose logs -f --tail=100 vault
 
   logs:
     cmds:
@@ -113,8 +116,8 @@ tasks:
 
   ui:
     cmds:
-      - open http://localhost:8200
-      - ./scripts/10_vault_vars.sh
+      - open https://localhost:8200
+      - ./scripts/00_vault_vars.sh
 
   pull:
     cmds:
@@ -127,3 +130,16 @@ tasks:
     cmds:
       - docker run --rm -p 8200:8200 --cap-add=IPC_LOCK -e VAULT_LICENSE=$VAULT_LICENSE hashicorp/vault-enterprise:latest server -dev -dev-root-token-id=root -dev-listen-address="0.0.0.0:8200"
     silent: true
+
+
+  config:
+    cmds:
+      - ./scripts/30_vault_config.sh
+      - docker compose restart prometheus
+
+  shell:
+    cmds:
+      - docker exec -it {{.STACK_NAME }}_vault /bin/sh
+    vars:
+      STACK_NAME:
+        sh: basename "`pwd`"
