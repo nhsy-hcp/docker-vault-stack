@@ -1,0 +1,86 @@
+// Log scraping - specific file paths (no globbing)
+loki.source.file "vault_logs" {
+  targets = [
+    {
+      __path__ = "/mnt/vault-logs/vault_audit.log",
+      job = "vaultlogs",
+      service_name = "vaultlogs",
+    },
+  ]
+  forward_to = [loki.write.default.receiver]
+}
+
+// Loki client configuration
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// Node exporter metrics collection
+prometheus.exporter.unix "default" {
+  set_collectors = ["cpu", "meminfo", "diskstats", "filesystem", "netdev", "loadavg"]
+}
+
+// Scrape node exporter metrics
+prometheus.scrape "unix" {
+  targets = prometheus.exporter.unix.default.targets
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// Scrape Vault metrics
+prometheus.scrape "vault" {
+  targets = [
+    {
+      __address__ = "vault:8200",
+    },
+  ]
+  metrics_path = "/v1/sys/metrics"
+  params = {
+    format = ["prometheus"],
+  }
+  scheme = "https"
+  bearer_token_file = "/etc/prometheus/prometheus-token"
+  tls_config {
+    ca_file = "/etc/ssl/certs/vault-ca.crt"
+  }
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// Scrape JSON exporter for Vault activity counters
+// prometheus.scrape "vault_activity_json" {
+//   targets = [
+//     {
+//       __address__ = "json-exporter:7979",
+//       __param_module = "vault_activity",
+//       // __param_target = "https://vault:8200/v1/sys/internal/counters/activity",
+//     },
+//   ]
+//   metrics_path = "/probe"
+//   scrape_interval = "5m"
+//   job_name = "vault-activity-counters"
+//   forward_to = [prometheus.remote_write.default.receiver]
+// }
+
+// Scrape Alloy's own metrics
+prometheus.scrape "alloy" {
+  targets = [
+    {
+      __address__ = "localhost:12345",
+    },
+  ]
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// Prometheus remote write (for local metrics)
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+livedebugging {
+  enabled = true
+}

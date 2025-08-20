@@ -1,8 +1,3 @@
-# Recommend creating a .env file in the root directory for these:
-# VAULT_VERSION=1.19-ent
-# VAULT_LOG_LEVEL=info
-# VAULT_PORT=8200
-
 services:
   vault:
     image: hashicorp/vault-enterprise:${VAULT_VERSION:-1.20-ent}
@@ -14,12 +9,14 @@ services:
       - .env # Contains VAULT_ADDR, VAULT_LICENSE
     environment:
       VAULT_LOG_LEVEL: ${VAULT_LOG_LEVEL:-info} # Default to 'info', allow override via .env
+      VAULT_CACERT: /vault/config/ca.crt # CA certificate for client validation
     cap_add:
       - IPC_LOCK
     volumes:
       - ./volumes/vault/raft.hcl:/vault/config/raft.hcl:ro
-      - ./volumes/vault/localhost.crt:/vault/config/tls.crt:ro
-      - ./volumes/vault/localhost.key:/vault/config/tls.key:ro
+      - ./volumes/vault/ca.crt:/vault/config/ca.crt:ro
+      - ./volumes/vault/localhost.crt:/vault/config/localhost.crt:ro
+      - ./volumes/vault/localhost.key:/vault/config/localhost.key:ro
       - vault-data:/vault/file  # Need this volume to fudge permissions error
       - vault-logs:/vault/logs
     command: server
@@ -64,6 +61,7 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
 
   loki:
     image: grafana/loki:${LOKI_VERSION:-latest}
@@ -79,32 +77,42 @@ services:
     entrypoint: /loki/loki_perm_fix.sh
     user: root # Required for permission fix as Loki runs as user Loki by default
 
-  promtail:
-    image: grafana/promtail:${PROMTAIL_VERSION:-latest}
-    container_name: ${COMPOSE_PROJECT_NAME}_promtail
+  alloy:
+    image: grafana/alloy:${ALLOY_VERSION:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME}_alloy
     restart: unless-stopped
+    environment:
+      - VAULT_ADDR=https://vault:8200
+      - VAULT_TOKEN=/etc/prometheus/prometheus-token
     volumes:
-      - ./volumes/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
-      - promtail-data:/promtail
-      - vault-logs:/mnt/vault-logs
-    command: -config.file=/etc/promtail/promtail.yml
-    depends_on:
-      - loki
-
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: ${COMPOSE_PROJECT_NAME}_node-exporter
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
-    volumes:
+      - ./volumes/alloy/:/etc/alloy/:ro
+      - alloy-data:/var/lib/alloy/data
+      - vault-logs:/mnt/vault-logs:ro
+      - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
+      - ./volumes/vault/ca.crt:/etc/ssl/certs/vault-ca.crt:ro
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--path.rootfs=/rootfs'
+    command: 
+      - run
+      - /etc/alloy/
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+    ports:
+      - "12345:12345"
+    depends_on:
+      - loki
+
+#  json-exporter:
+#    image: quay.io/prometheuscommunity/json-exporter:${JSON_EXPORTER_VERSION:-latest}
+#    container_name: ${COMPOSE_PROJECT_NAME}_json-exporter
+#    restart: unless-stopped
+#    ports:
+#      - "7979:7979"
+#    volumes:
+#      - ./volumes/json-exporter/config.yml:/config.yml:ro
+#      - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
+#
 
 networks:
   default:
@@ -115,5 +123,6 @@ volumes:
   grafana-data:
   prometheus-data:
   promtail-data:
+  alloy-data:
   vault-data:
   vault-logs:

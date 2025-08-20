@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 export VAULT_ADDR=https://127.0.0.1:8200
-export VAULT_CACERT=${PWD}/volumes/vault/localhost.crt
+export VAULT_CACERT=${PWD}/volumes/vault/ca.crt
 
 vault status
 sleep 3

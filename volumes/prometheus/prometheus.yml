@@ -9,7 +9,3 @@ scrape_configs:
     - targets: ['vault:8200']
     tls_config:
       insecure_skip_verify: true
-
-  - job_name: 'node-exporter'
-    static_configs:
-      - targets: ['node-exporter:9100']

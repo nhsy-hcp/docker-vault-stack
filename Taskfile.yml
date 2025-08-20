@@ -32,7 +32,7 @@ tasks:
       - docker compose up vault -d --pull=missing
       - sleep 5
       - |
-        echo "Vault: http://localhost:8200"
+        echo "Vault: https://localhost:8200"
     silent: true
 
   down:
@@ -143,3 +143,78 @@ tasks:
     vars:
       STACK_NAME:
         sh: basename "`pwd`"
+
+  create-ca:
+    desc: Generate root Certificate Authority (CA) for proper PKI setup
+    cmds:
+      - |
+        # Generate CA private key
+        openssl genrsa -out ./volumes/vault/ca.key 4096
+        echo "Generated CA private key: ./volumes/vault/ca.key"
+      - |
+        # Generate CA certificate (10-year validity)
+        openssl req -new -x509 -days 3650 -key ./volumes/vault/ca.key -out ./volumes/vault/ca.crt \
+          -subj "/CN=Vault Training Root CA"
+        echo "Generated CA certificate: ./volumes/vault/ca.crt"
+      - |
+        echo "Root CA setup complete. Certificate valid for 10 years."
+        openssl x509 -in ./volumes/vault/ca.crt -text -noout | grep -E "(Validity|Subject:|Issuer:)"
+
+  create-cert:
+    desc: Generate Vault server certificate signed by CA
+    cmds:
+      - |
+        # Generate Vault server private key
+        openssl genrsa -out ./volumes/vault/localhost.key 2048
+        echo "Generated Vault server private key: ./volumes/vault/localhost.key"
+      - |
+        # Create certificate signing request with SAN
+        openssl req -new -key ./volumes/vault/localhost.key -out ./volumes/vault/localhost.csr \
+          -subj "/CN=localhost" \
+          -addext "subjectAltName=DNS:localhost,DNS:vault,IP:127.0.0.1,IP:172.17.0.1"
+        echo "Generated certificate signing request: ./volumes/vault/localhost.csr"
+      - |
+        # Sign the certificate with CA (1-year validity)
+        openssl x509 -req -in ./volumes/vault/localhost.csr -CA ./volumes/vault/ca.crt -CAkey ./volumes/vault/ca.key \
+          -CAcreateserial -out ./volumes/vault/localhost.crt -days 365 \
+          -extensions v3_req -extfile <(cat <<EOF
+        [v3_req]
+        keyUsage = keyEncipherment,digitalSignature
+        extendedKeyUsage = serverAuth
+        subjectAltName = DNS:localhost,DNS:vault,IP:127.0.0.1
+        EOF
+        )
+        echo "Generated Vault server certificate: ./volumes/vault/localhost.crt"
+      - |
+        # Clean up CSR file
+        rm -f ./volumes/vault/localhost.csr
+        echo "Vault server certificate setup complete. Certificate valid for 1 year."
+
+  setup-pki:
+    desc: Setup complete PKI infrastructure (CA + certificate)
+    cmds:
+      - task: create-ca
+      - task: create-cert
+      - echo "PKI setup complete! Use 'task verify-pki' to validate the certificate chain."
+
+  verify-pki:
+    desc: Verify PKI certificate chain and validity
+    cmds:
+      - |
+        echo "=== Verifying Certificate Chain ==="
+        if [ -f "./volumes/vault/ca.crt" ] && [ -f "./volumes/vault/localhost.crt" ]; then
+          openssl verify -CAfile ./volumes/vault/ca.crt ./volumes/vault/localhost.crt
+          echo ""
+          echo "=== CA Certificate Info ==="
+          openssl x509 -in ./volumes/vault/ca.crt -text -noout | grep -E "(Subject:|Validity|Not Before|Not After)"
+          echo ""
+          echo "=== Vault Server Certificate Info ==="
+          openssl x509 -in ./volumes/vault/localhost.crt -text -noout | grep -E "(Subject:|Validity|Not Before|Not After|DNS:|IP:)"
+        else
+          echo "ERROR: PKI certificates not found. Run 'task setup-pki' first."
+          exit 1
+        fi
+
+  vault-restart:
+    cmds:
+        - docker compose restart vault
