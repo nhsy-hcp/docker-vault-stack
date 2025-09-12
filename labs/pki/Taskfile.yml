@@ -1,0 +1,72 @@
+# https://taskfile.dev
+
+version: '3'
+tasks:
+
+  default-cert:
+    cmds:
+      - |
+         vault write -f -field=certificate pki/issue/default common_name=test.example.com | openssl x509 -text -noout
+
+  v1-cert:
+    cmds:
+      - |
+         vault write -f -field=certificate pki/issue/v1 common_name=test.example.com | openssl x509 -text -noout        
+
+  v2-cert:
+    cmds:
+      - |
+         vault write -f -field=certificate pki/issue/v2 common_name=test.example.com | openssl x509 -text -noout
+
+  crl:
+    cmds:
+      - curl -sk https://127.0.0.1:8200/v1/pki/crl | openssl crl -text -noout
+
+  certs:
+    cmds:
+      - vault list pki/certs
+
+  certs-list:
+    cmds:
+      - vault list -format=json pki/certs | jq -r .[] | xargs -I {} sh -c 'echo "=== Certificate {} ==="; vault read pki/cert/{} | grep -E "serial_number|common_name|issuing_ca|expiration_time|revocation_time"'
+
+  certs-count:
+    cmds:
+      - vault list -format=json pki/certs | jq length
+
+  certs-detailed:
+    cmds:
+      - vault list -format=json pki/certs | jq -r .[] | xargs -I {} sh -c 'vault read -field=certificate pki/cert/{} | openssl x509 -text -noout'
+
+  issuers:
+    cmds:
+      - vault list pki/issuers
+
+  issuers-detailed:
+    cmds:
+      - vault list -format=json pki/issuers | jq -r .[] | xargs -I {} sh -c 'echo "=== Issuer {} ==="; vault read pki/issuer/{}'
+
+  leases:
+    cmds:
+      - vault list -format=json sys/leases/lookup/pki/issue/default | jq -r .[] | xargs -I {} vault lease lookup pki/issue/default/{}
+      - vault list -format=json sys/leases/lookup/pki/issue/v1 | jq -r .[] | xargs -I {} vault lease lookup pki/issue/v1/{}
+      - vault list -format=json sys/leases/lookup/pki/issue/v2 | jq -r .[] | xargs -I {} vault lease lookup pki/issue/v2/{}
+
+  health-check:
+    cmds:
+      - vault pki health-check pki
+
+  tidy-now:
+    cmds:
+      - vault write pki/tidy tidy_cert_store=true tidy_revoked_certs=true safety_buffer=1h
+
+  tidy-status:
+    cmds:
+      - vault read pki/tidy-status
+
+  pki-clean:
+    cmds:
+      - terraform destroy -target 'vault_mount.pki' -auto-approve
+      - vault secrets disable pki || true
+      - terraform state rm 'vault_pki_secret_backend_issuer.intermediate_v1' || true
+      - terraform state rm 'vault_pki_secret_backend_issuer.intermediate_v2' || true
