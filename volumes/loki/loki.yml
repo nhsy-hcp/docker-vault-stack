@@ -34,6 +34,10 @@ schema_config:
         prefix: index_
         period: 24h
 
+limits_config:
+  max_line_size: 10MB
+  max_line_size_truncate: false
+
 ruler:
   alertmanager_url: http://alertmanager:9093
 

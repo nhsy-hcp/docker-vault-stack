@@ -4,6 +4,9 @@ version: '3'
 dotenv:
   - .env
 
+vars:
+  CONTAINER_RUNTIME: docker
+
 tasks:
   default:
     aliases: ["all"]
@@ -11,14 +14,19 @@ tasks:
       - task: up
       - task: unseal
 
+  runtime:
+    cmds:
+      - |
+        echo "Using container runtime: {{ .CONTAINER_RUNTIME }}"
+
   up:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
     cmds:
-      - docker compose up -d --pull=missing
-      - sleep 5
       - |
+        {{ .CONTAINER_RUNTIME }} compose up -d --pull=missing
+        sleep 5
         echo "Grafana: http://localhost:3000"
         echo "Prometheus: http://localhost:9090"
         echo "Vault: http://localhost:8200"
@@ -29,19 +37,16 @@ tasks:
       - test -f .env
       - test -f docker-compose.yml
     cmds:
-      - docker compose up vault -d --pull=missing
-      - sleep 5
       - |
+        {{ .CONTAINER_RUNTIME }} compose up vault -d --pull=missing
+        sleep 5
         echo "Vault: https://localhost:8200"
     silent: true
 
-  down:
-    cmds:
-      - task: stop
-
   restart:
     cmds:
-      - docker compose restart vault
+      - |
+        {{ .CONTAINER_RUNTIME }} compose restart vault
 
   status:
     cmds:
@@ -53,25 +58,27 @@ tasks:
 
   unseal:
     cmds:
-      - ./scripts/20_vault_unseal.sh
-      - vault token renew $(cat ./volumes/prometheus/prometheus-token)
-      - docker compose restart prometheus
+      - |
+        ./scripts/20_vault_unseal.sh
+        vault token renew $(cat ./volumes/prometheus/prometheus-token)
+        {{ .CONTAINER_RUNTIME }} compose restart prometheus
 
   backup:
     cmds:
       - echo $VAULT_CACERT
       - vault operator raft snapshot save backup-`date +"%Y%m%d-%H%M"`.snap
 
-  rm:
+  down:
     aliases: ["clean"]
     cmds:
-      - docker compose rm -sfv
-      - docker volume rm {{.STACK_NAME }}_grafana-data
-      - docker volume rm {{.STACK_NAME }}_loki-data
-      - docker volume rm {{.STACK_NAME }}_prometheus-data
-      - docker volume rm {{.STACK_NAME }}_promtail-data
-      - docker volume rm {{.STACK_NAME }}_vault-data
-      - docker volume rm {{.STACK_NAME }}_vault-logs
+      - |
+        {{ .CONTAINER_RUNTIME }} compose down -v
+#      - docker volume rm {{.STACK_NAME }}_grafana-data
+#      - docker volume rm {{.STACK_NAME }}_loki-data
+#      - docker volume rm {{.STACK_NAME }}_prometheus-data
+#      - docker volume rm {{.STACK_NAME }}_promtail-data
+#      - docker volume rm {{.STACK_NAME }}_vault-data
+#      - docker volume rm {{.STACK_NAME }}_vault-logs
     ignore_error: true
     vars:
       STACK_NAME:
@@ -79,24 +86,27 @@ tasks:
 
   benchmark:
     cmds:
-      - vault-benchmark run -config=./benchmark/config.hcl
+    - vault-benchmark run -config=./benchmark/config.hcl
 
   metrics:
-      cmds:
-        - |
-          curl -s --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics?format=prometheus"
-          
+    cmds:
+      - |
+        curl -s --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics?format=prometheus"
+      
   logs-vault:
     cmds:
-      - docker compose logs -f --tail=100 vault
+      - |
+        {{ .CONTAINER_RUNTIME }} compose logs -f --tail=100 vault
 
   logs:
     cmds:
-      - docker compose logs -f
+      - |
+        {{ .CONTAINER_RUNTIME }} compose logs -f
 
   stop:
     cmds:
-      - docker compose stop
+      - |
+        {{ .CONTAINER_RUNTIME }} compose stop
 
   agent-up:
     dir: ./tfc-agent
@@ -104,7 +114,8 @@ tasks:
       - test -f .env
       - test -f docker-compose.yml
     cmds:
-      - docker compose up -d --pull=missing
+      - |
+        {{ .CONTAINER_RUNTIME }} compose up -d --pull=missing
 
   agent-down:
     dir: ./tfc-agent
@@ -112,7 +123,8 @@ tasks:
       - test -f .env
       - test -f docker-compose.yml
     cmds:
-      - docker compose stop
+      - |
+        {{ .CONTAINER_RUNTIME }} compose stop
 
   ui:
     cmds:
@@ -121,25 +133,29 @@ tasks:
 
   pull:
     cmds:
-      - docker compose pull
+      - |
+        {{ .CONTAINER_RUNTIME }} compose pull
     silent: true
 
   dev:
     preconditions:
       - test -f .env
     cmds:
-      - docker run --rm -p 8200:8200 --cap-add=IPC_LOCK -e VAULT_LICENSE=$VAULT_LICENSE hashicorp/vault-enterprise:latest server -dev -dev-root-token-id=root -dev-listen-address="0.0.0.0:8200"
+      - |
+        {{ .CONTAINER_RUNTIME }} run --rm -p 8200:8200 --cap-add=IPC_LOCK -e VAULT_LICENSE=$VAULT_LICENSE hashicorp/vault-enterprise:latest server -dev -dev-root-token-id=root -dev-listen-address="0.0.0.0:8200"
     silent: true
 
 
   config:
     cmds:
-      - ./scripts/30_vault_config.sh
-      - docker compose restart prometheus
+      - |
+        ./scripts/30_vault_config.sh
+        {{ .CONTAINER_RUNTIME }} compose restart prometheus
 
   shell:
     cmds:
-      - docker exec -it {{.STACK_NAME }}_vault /bin/sh
+      - |
+        {{ .CONTAINER_RUNTIME }} exec -it {{.STACK_NAME }}_vault /bin/sh
     vars:
       STACK_NAME:
         sh: basename "`pwd`"
@@ -148,47 +164,47 @@ tasks:
     desc: Generate root Certificate Authority (CA) for proper PKI setup
     cmds:
       - |
-        # Generate CA private key
-        openssl genrsa -out ./volumes/vault/ca.key 4096
-        echo "Generated CA private key: ./volumes/vault/ca.key"
+          # Generate CA private key
+          openssl genrsa -out ./volumes/vault/ca.key 4096
+          echo "Generated CA private key: ./volumes/vault/ca.key"
       - |
-        # Generate CA certificate (10-year validity)
-        openssl req -new -x509 -days 3650 -key ./volumes/vault/ca.key -out ./volumes/vault/ca.crt \
-          -subj "/CN=Vault Training Root CA"
-        echo "Generated CA certificate: ./volumes/vault/ca.crt"
+          # Generate CA certificate (10-year validity)
+          openssl req -new -x509 -days 3650 -key ./volumes/vault/ca.key -out ./volumes/vault/ca.crt \
+            -subj "/CN=Vault Training Root CA"
+          echo "Generated CA certificate: ./volumes/vault/ca.crt"
       - |
-        echo "Root CA setup complete. Certificate valid for 10 years."
-        openssl x509 -in ./volumes/vault/ca.crt -text -noout | grep -E "(Validity|Subject:|Issuer:)"
+          echo "Root CA setup complete. Certificate valid for 10 years."
+          openssl x509 -in ./volumes/vault/ca.crt -text -noout | grep -E "(Validity|Subject:|Issuer:)"
 
   create-cert:
     desc: Generate Vault server certificate signed by CA
     cmds:
       - |
-        # Generate Vault server private key
-        openssl genrsa -out ./volumes/vault/localhost.key 2048
-        echo "Generated Vault server private key: ./volumes/vault/localhost.key"
+          # Generate Vault server private key
+          openssl genrsa -out ./volumes/vault/localhost.key 2048
+          echo "Generated Vault server private key: ./volumes/vault/localhost.key"
       - |
-        # Create certificate signing request with SAN
-        openssl req -new -key ./volumes/vault/localhost.key -out ./volumes/vault/localhost.csr \
-          -subj "/CN=localhost" \
-          -addext "subjectAltName=DNS:localhost,DNS:vault,IP:127.0.0.1,IP:172.17.0.1"
-        echo "Generated certificate signing request: ./volumes/vault/localhost.csr"
+          # Create certificate signing request with SAN
+          openssl req -new -key ./volumes/vault/localhost.key -out ./volumes/vault/localhost.csr \
+            -subj "/CN=localhost" \
+            -addext "subjectAltName=DNS:localhost,DNS:vault,IP:127.0.0.1,IP:172.17.0.1"
+          echo "Generated certificate signing request: ./volumes/vault/localhost.csr"
       - |
-        # Sign the certificate with CA (1-year validity)
-        openssl x509 -req -in ./volumes/vault/localhost.csr -CA ./volumes/vault/ca.crt -CAkey ./volumes/vault/ca.key \
-          -CAcreateserial -out ./volumes/vault/localhost.crt -days 365 \
-          -extensions v3_req -extfile <(cat <<EOF
-        [v3_req]
-        keyUsage = keyEncipherment,digitalSignature
-        extendedKeyUsage = serverAuth
-        subjectAltName = DNS:localhost,DNS:vault,IP:127.0.0.1
-        EOF
-        )
-        echo "Generated Vault server certificate: ./volumes/vault/localhost.crt"
+          # Sign the certificate with CA (1-year validity)
+          openssl x509 -req -in ./volumes/vault/localhost.csr -CA ./volumes/vault/ca.crt -CAkey ./volumes/vault/ca.key \
+            -CAcreateserial -out ./volumes/vault/localhost.crt -days 365 \
+            -extensions v3_req -extfile <(cat <<EOF
+          [v3_req]
+          keyUsage = keyEncipherment,digitalSignature
+          extendedKeyUsage = serverAuth
+          subjectAltName = DNS:localhost,DNS:vault,IP:127.0.0.1
+          EOF
+          )
+          echo "Generated Vault server certificate: ./volumes/vault/localhost.crt"
       - |
-        # Clean up CSR file
-        rm -f ./volumes/vault/localhost.csr
-        echo "Vault server certificate setup complete. Certificate valid for 1 year."
+          # Clean up CSR file
+          rm -f ./volumes/vault/localhost.csr
+          echo "Vault server certificate setup complete. Certificate valid for 1 year."
 
   setup-pki:
     desc: Setup complete PKI infrastructure (CA + certificate)
@@ -201,20 +217,21 @@ tasks:
     desc: Verify PKI certificate chain and validity
     cmds:
       - |
-        echo "=== Verifying Certificate Chain ==="
-        if [ -f "./volumes/vault/ca.crt" ] && [ -f "./volumes/vault/localhost.crt" ]; then
-          openssl verify -CAfile ./volumes/vault/ca.crt ./volumes/vault/localhost.crt
-          echo ""
-          echo "=== CA Certificate Info ==="
-          openssl x509 -in ./volumes/vault/ca.crt -text -noout | grep -E "(Subject:|Validity|Not Before|Not After)"
-          echo ""
-          echo "=== Vault Server Certificate Info ==="
-          openssl x509 -in ./volumes/vault/localhost.crt -text -noout | grep -E "(Subject:|Validity|Not Before|Not After|DNS:|IP:)"
-        else
-          echo "ERROR: PKI certificates not found. Run 'task setup-pki' first."
-          exit 1
-        fi
+          echo "=== Verifying Certificate Chain ==="
+          if [ -f "./volumes/vault/ca.crt" ] && [ -f "./volumes/vault/localhost.crt" ]; then
+            openssl verify -CAfile ./volumes/vault/ca.crt ./volumes/vault/localhost.crt
+            echo ""
+            echo "=== CA Certificate Info ==="
+            openssl x509 -in ./volumes/vault/ca.crt -text -noout | grep -E "(Subject:|Validity|Not Before|Not After)"
+            echo ""
+            echo "=== Vault Server Certificate Info ==="
+            openssl x509 -in ./volumes/vault/localhost.crt -text -noout | grep -E "(Subject:|Validity|Not Before|Not After|DNS:|IP:)"
+          else
+            echo "ERROR: PKI certificates not found. Run 'task setup-pki' first."
+            exit 1
+          fi
 
   vault-restart:
     cmds:
-        - docker compose restart vault
+      - |
+        {{ .CONTAINER_RUNTIME }} compose restart vault
