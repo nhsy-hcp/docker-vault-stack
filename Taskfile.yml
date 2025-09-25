@@ -91,7 +91,7 @@ tasks:
   metrics:
     cmds:
       - |
-        curl -s --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics?format=prometheus"
+        curl -sk --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics?format=prometheus"
       
   logs-vault:
     cmds:

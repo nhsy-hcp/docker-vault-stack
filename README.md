@@ -43,11 +43,7 @@ cd docker-vault-stack
 ```
 
 **Environment Configuration:**
-Create `.env` file in the root directory:
-```bash
-export VAULT_ADDR=http://127.0.0.1:8200
-export VAULT_LICENSE=INSERT_LICENSE_HERE
-```
+Copy `.env.example` to `.env` file in the root directory and add your Vault Enterprise license key.
 
 > **License Options:**
 > - Request enterprise trial: https://www.hashicorp.com/products/vault/trial
