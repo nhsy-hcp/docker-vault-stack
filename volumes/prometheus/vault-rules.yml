@@ -1,0 +1,264 @@
+groups:
+  - name: vault_service
+    rules:
+      # Number of audit log request failures. A non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log devices occured. When Vault cannot log to a configured audit log devices, it ceases all user operations.
+      - alert: VaultAuditLogRequestFailure
+        expr: increase(vault_audit_log_request_failure[5m]) > 0
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vault audit log request failures detected"
+          description: "Vault instance {{ $labels.instance }} has {{ $value }} audit log request failures in the last 5 minutes"
+
+      # Number of audit log response failures. A non-zero value here indicates that there was a failure to receive a response to a request made to one of the configured audit log devices occured. When Vault cannot log to a configured audit log devices, it ceases all user operations.
+      - alert: VaultAuditLogResponseFailure
+        expr: increase(vault_audit_log_response_failure[5m]) > 0
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vault audit log response failures detected"
+          description: "Vault instance {{ $labels.instance }} has {{ $value }} audit log response failures in the last 5 minutes"
+
+      # Leadership issues. Alert on > 0 which will indicate a leadership change has occurred.
+      - alert: VaultLeadershipLost
+        expr: increase(vault_core_leadership_lost[5m]) > 0
+        for: 0m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vault leadership lost"
+          description: "Vault instance {{ $labels.instance }} has lost leadership"
+
+      # Duration of time taken by cluster leadership setup failures which have occurred in a highly available Vault cluster. Alert on > 0 which indicates a failure to complete leadership setup.
+      - alert: VaultLeadershipSetupFailed
+        expr: increase(vault_core_leadership_setup_failed[5m]) > 0
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vault leadership setup failed"
+          description: "Vault instance {{ $labels.instance }} failed to setup leadership"
+
+      # 30 day license expiration warning
+      - alert: VaultLicenseExpiringSoon
+        expr: (vault_core_license_expiration_time_epoch - time()) < 30 * 24 * 3600
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "Vault license expiring soon"
+          description: "Vault license on {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+
+      # Size of auth mount table. This metric is labeled by table type (auth or logical) and whether or not the table is replicated (local or not)
+      - alert: VaultAuthMountTableLarge
+        expr: vault_core_mount_table_size{table_type="auth"} > 524288
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "Vault auth mount table is large"
+          description: "Auth mount table on {{ $labels.instance }} is {{ $value }} bytes (threshold: 512 KB)"
+
+      # Size of secrets mount table. This metric is labeled by table type (auth or logical) and whether or not the table is replicated (local or not)
+      - alert: VaultLogicalMountTableLarge
+        expr: vault_core_mount_table_size{table_type="logical"} > 524288
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "Vault logical mount table is large"
+          description: "Logical mount table on {{ $labels.instance }} is {{ $value }} bytes (threshold: 512 KB)"
+
+      # Has a value 1 when Vault is unsealed, and 0 when Vault is sealed.
+      - alert: VaultSealed
+        expr: vault_core_unsealed == 0
+        for: 0m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vault is sealed"
+          description: "Vault instance {{ $labels.instance }} is sealed and unavailable"
+
+      # Number of all leases which are eligible for eventual expiry. Alert if there are more than 10,000 active leases for over 10 minutes.
+      - alert: VaultHighLeaseCount
+        expr: vault_expire_num_leases > 10000
+        for: 10m
+        labels:
+          severity: low
+        annotations:
+          summary: "High number of Vault leases"
+          description: "Vault instance {{ $labels.instance }} has {{ $value }} active leases"
+
+      # Number of nanoseconds consumed by garbage collection (GC) pauses since Vault started. Alert if the rate of GC pause time exceeds 2 seconds per minute.
+      - alert: VaultHighGCPause
+        expr: (rate(vault_runtime_total_gc_pause_ns[5m]) * 60 / 1e9) > 2
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "High GC pause time in Vault"
+          description: "Vault instance {{ $labels.instance }} has high GC pause time: {{ $value }}ms per second"
+
+      # Vault's user login response time or number of login requests.
+      - alert: VaultHighLoginRequestRate
+        expr: rate(vault_core_handle_login_request[5m]) > 50
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "High login request rate"
+          description: "Vault instance {{ $labels.instance }} is handling {{ $value }} login requests per second"
+
+      - alert: VaultHighRequestRate
+        expr: rate(vault_core_handle_request[5m]) > 500
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "High request rate"
+          description: "Vault instance {{ $labels.instance }} is handling {{ $value }} requests per second"
+
+      # Number of in-flight requests. Alert if there are more than 100 in-flight requests for over 5 minutes.
+      - alert: VaultHighInFlightRequests
+        expr: vault_core_in_flight_requests > 100
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "High in-flight requests"
+          description: "Vault instance {{ $labels.instance }} has {{ $value }} in-flight requests"
+
+      # The duration of time taken by post-unseal operations handled by Vault core. Good for debugging problems with Vault startup after unsealing. Alert if there are more than 5 post-unseal operations in 5 minutes.
+      - alert: VaultPostUnsealIssues
+        expr: increase(vault_core_post_unseal[5m]) > 5
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "Frequent post-unseal operations"
+          description: "Vault instance {{ $labels.instance }} has performed {{ $value }} post-unseal operations in 5 minutes"
+
+      # Time taken to flush a ready Write Ahead Log (WAL) to storage. Alert if there are more than 500 flush errors in 5 minutes.
+      - alert: VaultWALFlushErrors
+        expr: increase(vault_wal_flushReady_errors[5m]) > 500
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vault WAL flush errors"
+          description: "Vault instance {{ $labels.instance }} has WAL flush errors"
+
+      # Time taken to persist a Write Ahead Log (WAL) to storage. Alert if there are more than 1000 persist errors in 5 minutes.
+      - alert: VaultWALPersistErrors
+        expr: increase(vault_wal_persistWALs_errors[5m]) > 1000
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vault WAL persist errors"
+          description: "Vault instance {{ $labels.instance }} has WAL persist errors"
+
+      # The number of errors encountered while trying to save the snapshot indicated by snapshot_config_name. Alert if there are any errors in the last 5 minutes.
+      - alert: VaultAutoSnapshotErrors
+        expr: increase(vault_autosnapshots_save_errors[5m]) > 0
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vault auto-snapshot errors"
+          description: "Vault instance {{ $labels.instance }} has auto-snapshot save errors"
+
+      # Number of created root tokens. Does not decrease on revocation. Alert if there are any root tokens created in the last 5 minutes.
+      - alert: VaultRootTokenCreation
+        expr: increase(vault_token_create_root[5m]) > 0
+        for: 0m
+        labels:
+          severity: high
+        annotations:
+          summary: "Root token created"
+          description: "A root token was created on Vault instance {{ $labels.instance }}"
+
+  - name: vault_resource
+    rules:
+      # Disk I/O Latency. Alert if the rate of disk I/O time is greater than 50% over 5 minutes.
+      - alert: NodeDiskIOLatencyHigh
+        expr: (rate(node_disk_io_time_seconds_total[5m]) > 0.5)
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "High Disk I/O latency"
+          description: "Disk I/O latency on {{ $labels.instance }} is unusually high. It is currently at {{ $value }}%"
+
+
+      # Percentage of physical memory in use
+      - alert: HighMemoryUsage
+        expr: mem_used_percent > 0
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage on {{ $labels.instance }} is {{ $value }}%"
+      
+      # Percentage of physical memory in use over 85% for 2 minutes
+      - alert: HighMemoryUsage
+        expr: mem_used_percent > 85
+        for: 2m
+        labels:
+          severity: high
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage on {{ $labels.instance }} is {{ $value }}%"
+
+      # Percentage of time the CPU spends waiting for I/O operations to complete
+      - alert: HighIOWait
+        expr: cpu_usage_iowait > 10
+        for: 10m
+        labels:
+          severity: low
+        annotations:
+          summary: "High I/O wait"
+          description: "CPU I/O wait on {{ $labels.instance }} is {{ $value }}%"
+
+      # Bytes received on each network interface greater than 100MB/s over 10 minutes
+      - alert: HighNetworkTrafficRecieve
+        expr: rate(net_bytes_recv[5m]) > 100000000  # 100MB/s
+        for: 10m
+        labels:
+          severity: low
+        annotations:
+          summary: "High network traffic"
+          description: "Network traffic on {{ $labels.instance }} is {{ $value }}/s"
+      
+      # Bytes transmitted on each network interface. Greater than 100MB/s over 10 minutes
+      - alert: HighNetworkTrafficSent
+        expr: rate(net_bytes_sent[5m]) > 100000000  # 100MB/s
+        for: 10m
+        labels:
+          severity: low
+        annotations:
+          summary: "High network traffic"
+          description: "Network traffic on {{ $labels.instance }} is {{ $value }}/s"
+      
+      # Total number of available file handles
+      - alert: HighFileDescriptorUsageTotal
+        expr: (linux_sysctl_fs_file_nr / linux_sysctl_fs_file_max) * 100 > 80
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "Total high file descriptor usage"
+          description: "File descriptor usage on {{ $labels.instance }} is {{ $value }}%"
+
+      # Number of file handles being used across all processes on the host.
+      - alert: HighFileDescriptorUsage
+        expr: (linux_sysctl_fs_file_nr / linux_sysctl_fs_file_max) * 100 > 80
+        for: 5m
+        labels:
+          severity: low
+        annotations:
+          summary: "High file descriptor usage"
+          description: "File descriptor usage on {{ $labels.instance }} is {{ $value }}%"

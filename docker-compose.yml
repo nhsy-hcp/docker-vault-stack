@@ -53,6 +53,7 @@ services:
       - "9090:9090"
     volumes:
       - ./volumes/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./volumes/prometheus/vault-rules.yml:/etc/prometheus/vault-rules.yml:ro
       - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
       - prometheus-data:/prometheus
     command:
@@ -93,7 +94,7 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-    command: 
+    command:
       - run
       - /etc/alloy/
       - --storage.path=/var/lib/alloy/data

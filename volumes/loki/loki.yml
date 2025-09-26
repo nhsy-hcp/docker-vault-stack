@@ -37,6 +37,9 @@ schema_config:
 limits_config:
   max_line_size: 10MB
   max_line_size_truncate: false
+  ingestion_rate_mb: 8
+  ingestion_burst_size_mb: 16
+  per_stream_rate_limit: 3MB
 
 ruler:
   alertmanager_url: http://alertmanager:9093

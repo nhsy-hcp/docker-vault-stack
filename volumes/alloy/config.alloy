@@ -14,6 +14,9 @@ loki.source.file "vault_logs" {
 loki.write "default" {
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"
+    batch_size = "1MiB"
+    batch_wait = "1s"
+    max_backoff_period = "5m"
   }
 }
 
@@ -26,6 +29,10 @@ prometheus.exporter.unix "default" {
 prometheus.scrape "unix" {
   targets = prometheus.exporter.unix.default.targets
   forward_to = [prometheus.remote_write.default.receiver]
+  
+  clustering {
+    enabled = true
+  }
 }
 
 // Scrape Vault metrics
@@ -44,7 +51,17 @@ prometheus.scrape "vault" {
   tls_config {
     ca_file = "/etc/ssl/certs/vault-ca.crt"
   }
+//  forward_to = [prometheus.remote_write.default.receiver]
+  forward_to = [prometheus.relabel.vault.receiver]
+}
+
+prometheus.relabel "vault" {
   forward_to = [prometheus.remote_write.default.receiver]
+  rule {
+    replacement = "vault-cluster"
+    target_label = "cluster"
+    action = "replace"
+  }
 }
 
 // Scrape JSON exporter for Vault activity counters

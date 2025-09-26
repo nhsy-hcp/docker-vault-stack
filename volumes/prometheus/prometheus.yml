@@ -9,3 +9,6 @@
 #    - targets: ['vault:8200']
 #    tls_config:
 #      insecure_skip_verify: true
+
+rule_files:
+  - "vault-rules.yml"
