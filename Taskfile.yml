@@ -23,6 +23,9 @@ tasks:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
+      - test -f ./volumes/vault/ca.crt
+      - test -f ./volumes/vault/localhost.crt
+      - test -f ./volumes/vault/localhost.key
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up -d --pull=missing
@@ -36,6 +39,9 @@ tasks:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
+      - test -f ./volumes/vault/ca.crt
+      - test -f ./volumes/vault/localhost.crt
+      - test -f ./volumes/vault/localhost.key
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up vault -d --pull=missing
@@ -235,3 +241,17 @@ tasks:
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose restart vault
+
+  tokens:
+    desc: List all token accessors with details
+    cmds:
+      - |
+        echo "=== Token Accessors ==="
+        vault list auth/token/accessors
+        echo ""
+        echo "=== Token Details ==="
+        for accessor in $(vault list -format=json auth/token/accessors | jq -r '.[]'); do
+          echo "--- Accessor: $accessor ---"
+          vault token lookup -accessor $accessor || echo "Token not found or expired"
+          echo ""
+        done

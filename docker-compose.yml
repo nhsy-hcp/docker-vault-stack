@@ -12,9 +12,12 @@ services:
       VAULT_CACERT: /vault/config/ca.crt # CA certificate for client validation
     cap_add:
       - IPC_LOCK
+    configs:
+      - source: vault-config
+        target: /vault/config/raft.hcl
+      - source: vault-ca
+        target: /vault/config/ca.crt
     volumes:
-      - ./volumes/vault/raft.hcl:/vault/config/raft.hcl:ro
-      - ./volumes/vault/ca.crt:/vault/config/ca.crt:ro
       - ./volumes/vault/localhost.crt:/vault/config/localhost.crt:ro
       - ./volumes/vault/localhost.key:/vault/config/localhost.key:ro
       - vault-data:/vault/file  # Need this volume to fudge permissions error
@@ -33,9 +36,12 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    configs:
+      - source: grafana-datasources
+        target: /etc/grafana/provisioning/datasources/datasources.yml
+      - source: grafana-dashboards-config
+        target: /etc/grafana/provisioning/dashboards/dashboards.yml
     volumes:
-      - ./volumes/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
-      - ./volumes/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./volumes/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     environment:
@@ -51,9 +57,12 @@ services:
     restart: unless-stopped
     ports:
       - "9090:9090"
+    configs:
+      - source: prometheus-config
+        target: /etc/prometheus/prometheus.yml
+      - source: prometheus-rules
+        target: /etc/prometheus/vault-rules.yml
     volumes:
-      - ./volumes/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./volumes/prometheus/vault-rules.yml:/etc/prometheus/vault-rules.yml:ro
       - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
       - prometheus-data:/prometheus
     command:
@@ -70,10 +79,14 @@ services:
     restart: unless-stopped
     ports:
       - "3100:3100"
+    configs:
+      - source: loki-config
+        target: /etc/loki/loki.yml
+      - source: loki-perm-fix
+        target: /loki/loki_perm_fix.sh
+        mode: 0755
     volumes:
-      - ./volumes/loki/loki.yml:/etc/loki/loki.yml:ro
       - loki-data:/loki/data
-      - ./volumes/loki/loki_perm_fix.sh:/loki/loki_perm_fix.sh:ro
 #    command: -config.file=/etc/loki/loki.yml
     entrypoint: /loki/loki_perm_fix.sh
     user: root # Required for permission fix as Loki runs as user Loki by default
@@ -85,18 +98,21 @@ services:
     environment:
       - VAULT_ADDR=https://vault:8200
       - VAULT_TOKEN=/etc/prometheus/prometheus-token
+    configs:
+      - source: alloy-config
+        target: /etc/alloy/config.alloy
+      - source: vault-ca
+        target: /etc/ssl/certs/vault-ca.crt
     volumes:
-      - ./volumes/alloy/:/etc/alloy/:ro
       - alloy-data:/var/lib/alloy/data
       - vault-logs:/mnt/vault-logs:ro
       - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
-      - ./volumes/vault/ca.crt:/etc/ssl/certs/vault-ca.crt:ro
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
     command:
       - run
-      - /etc/alloy/
+      - /etc/alloy/config.alloy
       - --storage.path=/var/lib/alloy/data
       - --server.http.listen-addr=0.0.0.0:12345
     ports:
@@ -114,6 +130,26 @@ services:
 #      - ./volumes/json-exporter/config.yml:/config.yml:ro
 #      - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
 #
+
+configs:
+  vault-config:
+    file: ./volumes/vault/raft.hcl
+  vault-ca:
+    file: ./volumes/vault/ca.crt
+  grafana-datasources:
+    file: ./volumes/grafana/datasources.yml
+  grafana-dashboards-config:
+    file: ./volumes/grafana/dashboards.yml
+  prometheus-config:
+    file: ./volumes/prometheus/prometheus.yml
+  prometheus-rules:
+    file: ./volumes/prometheus/vault-rules.yml
+  loki-config:
+    file: ./volumes/loki/loki.yml
+  loki-perm-fix:
+    file: ./volumes/loki/loki_perm_fix.sh
+  alloy-config:
+    file: ./volumes/alloy/config.alloy
 
 networks:
   default:
