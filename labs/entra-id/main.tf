@@ -1,8 +1,8 @@
 locals {
   redirect_uris = [
     "http://localhost:8250/oidc/callback",
-    "https://localhost:8200/ui/vault/auth/entra/oidc/callback",
-    "https://127.0.0.1:8200/ui/vault/auth/entra/oidc/callback",
+    "https://127.0.0.1:8200/ui/vault/auth/azure/oidc/callback",
+    "https://localhost:8200/ui/vault/auth/azure/oidc/callback",
   ]
 }
 
@@ -42,12 +42,12 @@ resource "azuread_application" "vault" {
     id_token {
       name = "upn"
     }
-    id_token {
-      name = "given_name"
-    }
-    id_token {
-      name = "family_name"
-    }
+    # id_token {
+    #   name = "given_name"
+    # }
+    # id_token {
+    #   name = "family_name"
+    # }
   }
   required_resource_access {
     # resource_app_id = "00000003-0000-0000-c000-000000000000" # Microsoft Graph
@@ -63,17 +63,10 @@ resource "azuread_application" "vault" {
       id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["GroupMember.Read.All"]
       type = "Scope"
     }
-
-    # resource_access {
-    #   # id   = "7ab1d382-f21e-4acd-a863-ba3e13f7da61" # Directory.Read.All
-    #   id   = azuread_service_principal.msgraph.app_role_ids["Directory.Read.All"]
-    #   type = "Role"
-    # }
-
-    # resource_access {
-    #   id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["Group.Read.All"]
-    #   type = "Scope"
-    # }
+    resource_access {
+      id   = azuread_service_principal.msgraph.oauth2_permission_scope_ids["openid"]
+      type = "Scope"
+    }
   }
 }
 
@@ -104,55 +97,9 @@ resource "azuread_service_principal" "vault" {
 
 # Grant users access to the application # Group assignment is not supported in free tier
 resource "azuread_app_role_assignment" "vault_users" {
-  for_each = toset([
-    for user in azuread_user.users : user.object_id
-  ])
+  for_each = var.azure_users
 
   app_role_id         = "00000000-0000-0000-0000-000000000000" # Default access role
-  principal_object_id = each.value
+  principal_object_id = azuread_user.users[each.key].object_id
   resource_object_id  = azuread_service_principal.vault.object_id
-}
-
-resource "vault_jwt_auth_backend" "default" {
-  path               = "entra"
-  type               = "oidc"
-  oidc_client_id     = azuread_application.vault.client_id
-  oidc_client_secret = azuread_application_password.vault.value
-  default_role       = "default"
-  oidc_discovery_url = "https://login.microsoftonline.com/${data.azuread_client_config.current.tenant_id}/v2.0"
-
-  tune {
-    default_lease_ttl  = "6h"
-    max_lease_ttl      = "24h"
-    token_type         = "default-service"
-    listing_visibility = "unauth"
-  }
-}
-
-resource "vault_jwt_auth_backend_role" "default" {
-  backend        = vault_jwt_auth_backend.default.path
-  role_name      = "default"
-  token_policies = ["default"]
-  bound_claims = {
-    "groups" = azuread_group.groups["vault-user"].object_id
-  }
-  user_claim   = "upn"
-  groups_claim = "groups"
-  oidc_scopes  = ["https://graph.microsoft.com/.default", "profile"]
-
-  allowed_redirect_uris = local.redirect_uris
-  # verbose_oidc_logging  = true
-
-  claim_mappings = {
-    name = "name"
-    oid  = "oid"
-    # upn   = "upn"
-    # given_name = "first_name"
-    # family_name  = "last_name"
-  }
-}
-
-# Outputs for admin consent
-output "vault_application_id" {
-  value = azuread_application.vault.client_id
 }

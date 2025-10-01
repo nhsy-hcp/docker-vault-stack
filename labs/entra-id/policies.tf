@@ -25,13 +25,21 @@ data "vault_policy_document" "team_reader" {
   }
 }
 
+# Create vault admin policy in root namespace
 resource "vault_policy" "admin" {
   name   = "entra-admin"
   policy = data.vault_policy_document.admin.hcl
 }
 
-resource "vault_policy" "bu01_reader" {
-  namespace = "bu01"
-  name      = "entra-bu01-reader"
+# Create team reader policies in their respective namespaces
+resource "vault_policy" "tn001_team1_reader" {
+  namespace = vault_namespace.tn001.path_fq
+  name      = "entra-tn001-team1-reader"
   policy    = data.vault_policy_document.team_reader["team1"].hcl
+}
+
+resource "vault_policy" "tn001_team2_reader" {
+  namespace = vault_namespace.tn001.path_fq
+  name      = "entra-tn001-team2-reader"
+  policy    = data.vault_policy_document.team_reader["team2"].hcl
 }

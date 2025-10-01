@@ -7,29 +7,37 @@ azure_groups = {
     display_name = "vault-user"
     description  = "General Vault users group"
   }
-  "vault-bu01-reader" = {
-    display_name = "vault-bu01-reader"
-    description  = "Vault BU01 readers group"
+  "vault-tn001-team1-reader" = {
+    display_name = "vault-tn001-team1-reader"
+    description  = "Vault tn001 team1 readers group"
   }
-  "vault-bu02-reader" = {
-    display_name = "vault-bu02-reader"
-    description  = "Vault BU02 readers group"
+  "vault-tn001-team2-reader" = {
+    display_name = "vault-tn001-team2-reader"
+    description  = "Vault tn001 team2 readers group"
   }
 }
 
 azure_users = {
+  "vaultadmin" = {
+    display_name      = "Vault Admin"
+    given_name        = "Vault"
+    surname           = "Admin"
+    password          = "__changeme__"
+    group_memberships = ["vault-admin"]
+  }
   "testuser1" = {
     display_name      = "Test User 1"
     given_name        = "Test"
     surname           = "User 1"
-    password          = "__REPLACE__"
-    group_memberships = ["vault-user", "vault-bu01-reader"]
+    password          = "__changeme__"
+    group_memberships = ["vault-user", "vault-tn001-team1-reader"]
   }
   "testuser2" = {
     display_name      = "Test User 2"
     given_name        = "Test"
     surname           = "User 2"
-    password          = "__REPLACE__"
-    group_memberships = ["vault-user", "vault-bu02-reader"]
+    password          = "__changeme__"
+    group_memberships = ["vault-user", "vault-tn001-team2-reader"]
   }
 }
+

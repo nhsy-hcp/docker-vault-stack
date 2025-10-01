@@ -1,6 +1,13 @@
 # Azure Entra ID Lab
 
-This lab demonstrates how to configure Azure CLI to use Azure Entra ID for authentication using a service principal.
+This lab demonstrates how to integrate HashiCorp Vault with Azure Entra ID (formerly Azure AD) for identity and access management. The lab sets up OIDC authentication between Vault and Azure, allowing Azure users and groups to authenticate to Vault.
+
+## Prerequisites
+
+- Azure subscription with Global Administrator role
+- Docker and Azure CLI access
+- Vault Enterprise running with TLS enabled
+- Terraform CLI
 
 ## Launch Azure CLI Container
 
@@ -136,27 +143,128 @@ docker run -it --rm \
 - `existing_users`: List of existing Azure AD user principal names to add to vault-user group
 - `vault_addr`: Vault server address (default: https://127.0.0.1:8200)
 
-**Architecture:**
-The Terraform configuration includes:
-- `main.tf`: Azure AD application setup, Vault OIDC backend configuration
-- `users.tf`: User and group management with data sources for existing users
-- `variables.tf`: Input variable definitions
-- `terraform.tfvars`: Configuration values for groups, users, and existing user mappings
+## Lab Architecture
 
-**Technical Implementation:**
+The Terraform configuration creates a complete Vault-Azure integration:
+
+```mermaid
+graph TB
+    subgraph Azure["Azure Entra ID"]
+        SP["Service Principal<br/>(terraform-spn)"]
+        APP["Azure AD Application<br/>(Vault OIDC)"]
+        GROUPS["Azure AD Groups<br/>- vault-admin<br/>- vault-user"]
+        USERS["Azure AD Users<br/>- Created Users<br/>- Existing Users"]
+    end
+
+    subgraph Vault["HashiCorp Vault"]
+        OIDC["OIDC Auth Method<br/>/auth/azure"]
+        IE["Identity Entities<br/>(per user)"]
+        IG["Identity Groups<br/>- external-vault-admin<br/>- external-vault-user"]
+        POL["Policies<br/>- vault-admin-policy<br/>- vault-user-policy"]
+        SEC["Secrets<br/>/kv/admin/*<br/>/kv/user/*"]
+    end
+
+    USERS -->|Member of| GROUPS
+    SP -->|Manages| APP
+    SP -->|Creates| GROUPS
+    SP -->|Creates| USERS
+
+    APP -->|OIDC Trust| OIDC
+    OIDC -->|Creates| IE
+    GROUPS -->|Maps to| IG
+    IE -->|Member of| IG
+    IG -->|Assigned| POL
+    POL -->|Controls Access| SEC
+
+    classDef azure fill:#0078D4,stroke:#004578,color:#fff
+    classDef vault fill:#000,stroke:#FFD814,color:#fff
+    class SP,APP,GROUPS,USERS azure
+    class OIDC,IE,IG,POL,SEC vault
+```
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Browser
+    participant Vault
+    participant Azure as Azure Entra ID
+
+    User->>Vault: vault login -method=oidc -path=azure
+    Vault->>Browser: Opens OIDC login URL
+    Browser->>Azure: Redirects to Azure login
+    User->>Azure: Enters credentials
+    Azure->>Azure: Validates credentials
+    Azure->>Azure: Checks group membership
+    Azure->>Browser: Returns OIDC token with claims
+    Browser->>Vault: Sends OIDC token
+    Vault->>Azure: Validates token signature
+    Vault->>Vault: Creates/updates identity entity
+    Vault->>Vault: Maps groups to identity groups
+    Vault->>Vault: Assigns policies based on groups
+    Vault->>User: Returns Vault token with policies
+```
+
+
+### File Structure
+- `main.tf`: Azure AD application registration and Vault OIDC configuration
+- `identity.tf`: Vault identity entities and groups for Azure users
+- `policies.tf`: Vault policies for Azure group access control
+- `secrets.tf`: Sample KV secrets for testing access
+- `vault.tf`: Vault provider configuration with TLS
+- `variables.tf`: Input variable definitions
+- `outputs.tf`: Resource IDs and connection information
+
+### Key Components
+1. **Azure AD Application**: Registered application for OIDC authentication
+2. **Vault OIDC Auth Method**: Configured to trust Azure tokens
+3. **Identity Mapping**: Azure groups mapped to Vault policies
+4. **Access Control**: Role-based access using Azure group memberships
+
+### Technical Implementation
 - Uses `data "azuread_user"` to reference existing Azure AD users
 - Combines created and existing user memberships using `concat()` function
 - Supports flexible group membership assignment through variables
+- Implements proper TLS configuration for secure OIDC communication
 
-**Outputs:**
-- `vault_application_id`: Azure AD application ID for admin consent
+## Testing the Integration
 
-### Vault TLS Certificate Generation
-Entra ID integration requires a Vault TLS listener.
-To generate a self-signed TLS certificate for Vault, you can use the following command.
+After successful deployment:
+
+1. **Get the Vault Application ID for admin consent:**
+   ```bash
+   terraform output vault_application_id
+   ```
+
+2. **Grant admin consent (if not done earlier):**
+   ```bash
+   export VAULT_APP_ID=$(terraform output -raw vault_application_id)
+   az ad app permission admin-consent --id $VAULT_APP_ID
+   ```
+
+3. **Test OIDC authentication:**
+
+   **Root namespace (vault-admin group):**
+   ```bash
+   # Login with Azure credentials via browser
+   vault login -method=oidc -path=azure
+   ```
+
+   **Admin namespace (vault-user group):**
+   ```bash
+   # Login with Azure credentials via browser in admin namespace
+   vault login -method=oidc -path=azure -namespace=admin
+   ```
+
+## Troubleshooting
+
+### Useful Commands
+
 ```bash
-openssl req -x509 -out localhost.crt -keyout localhost.key -days 365 \
-  -newkey rsa:2048 -nodes -sha256 \
-  -subj '/CN=localhost' -extensions EXT -config <( \
-   printf "[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost,DNS:vault,IP:127.0.0.1\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
+# Check OIDC configuration
+vault auth list -detailed
+
+# Test group membership
+vault token lookup
 ```
