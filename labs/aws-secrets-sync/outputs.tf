@@ -99,3 +99,18 @@ output "demo_workflow" {
     terraform output synced_secrets
   EOT
 }
+
+output "iam_role_arn" {
+  description = "ARN of the IAM role used by Vault for secrets sync"
+  value       = aws_iam_role.vault_secrets_sync.arn
+}
+
+output "iam_role_name" {
+  description = "Name of the IAM role used by Vault for secrets sync"
+  value       = aws_iam_role.vault_secrets_sync.name
+}
+
+output "trust_policy_arns" {
+  description = "IAM principal ARNs configured in the trust policy (auto-detected or explicitly configured)"
+  value       = local.computed_trust_policy_arns
+}

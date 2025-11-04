@@ -21,8 +21,6 @@ locals {
     app2_secrets = {
       description = "app2 secrets"
       data = {
-        jwt_secret     = "jwt_signing_key_xyz789abc"
-        encryption_key = "aes256_key_for_encryption"
         webhook_secret = "webhook_verify_secret_123"
       }
     }
@@ -46,9 +44,8 @@ resource "vault_kv_secret_v2" "test_secrets" {
   provider = vault.tn001
   for_each = local.test_secrets
 
-  mount = vault_mount.kv_sync.path
-  name  = each.key
-
+  mount     = vault_mount.kv_sync.path
+  name      = replace(each.key, "_", "-")
   data_json = jsonencode(each.value.data)
 }
 
@@ -61,8 +58,8 @@ resource "vault_secrets_sync_aws_destination" "aws_sm" {
   name     = var.sync_destination_name
   region   = var.aws_region
 
-  # AWS credentials provided via environment variables:
-  # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+  # IAM role assumption for authentication
+  role_arn = aws_iam_role.vault_secrets_sync.arn
 
   # Custom tags for all synced secrets
   custom_tags = {
@@ -75,13 +72,24 @@ resource "vault_secrets_sync_aws_destination" "aws_sm" {
   # Template for generating AWS secret names
   # Format: vault/<mount_path>/<secret_path>
   # https://developer.hashicorp.com/vault/docs/sync#name-template
-  secret_name_template = "vault/{{ .MountPath | lowercase }}/{{ .SecretPath | lowercase }}"
+  secret_name_template = var.secret_name_template
 
   # Sync at secret-path level
   # This means entire secret (with all keys) syncs as one AWS secret
   granularity = "secret-path"
 
-  depends_on = [vault_generic_endpoint.activate_secrets_sync]
+  depends_on = [
+    vault_generic_endpoint.activate_secrets_sync,
+    aws_iam_role.vault_secrets_sync
+  ]
+}
+
+# Add a delay to workaround authentication issues between destination and association creation
+resource "time_sleep" "default" {
+  create_duration = "10s"
+  depends_on = [
+    vault_secrets_sync_aws_destination.aws_sm
+  ]
 }
 
 # Create sync associations for each test secret
@@ -96,6 +104,7 @@ resource "vault_secrets_sync_association" "test_secrets" {
 
   depends_on = [
     vault_secrets_sync_aws_destination.aws_sm,
-    vault_kv_secret_v2.test_secrets
+    vault_kv_secret_v2.test_secrets,
+    time_sleep.default
   ]
 }

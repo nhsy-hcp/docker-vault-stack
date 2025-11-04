@@ -18,18 +18,12 @@ tasks:
         if ! vault namespace list -format=json | jq -e '.[] | select(. == "admin/")' > /dev/null 2>&1; then
           echo "Creating admin namespace..."
           vault namespace create admin
-          echo "✓ admin namespace created"
-        else
-          echo "✓ admin namespace exists"
         fi
       - |
         echo "Checking for admin/tn001 namespace..."
         if ! vault namespace list -namespace=admin -format=json | jq -e '.[] | select(. == "tn001/")' > /dev/null 2>&1; then
           echo "Creating tn001 namespace under admin..."
           vault namespace create -namespace=admin tn001
-          echo "✓ admin/tn001 namespace created"
-        else
-          echo "✓ admin/tn001 namespace exists"
         fi
         echo ""
         echo "Namespace check complete. admin/tn001 is ready for use."
@@ -61,63 +55,128 @@ tasks:
       - sh: test -f .terraform.lock.hcl
         msg: "Terraform not initialized. Run 'task init' first"
     cmds:
-      - terraform apply
+      - terraform apply -auto-approve
 
   output:
     desc: show terraform outputs
     cmds:
       - terraform output
 
+  verify-sync:
+    desc: check secrets sync destination associations status
+    preconditions:
+      - sh: vault status
+        msg: "Vault is not running or unsealed"
+    cmds:
+      - |
+        DEST_NAME=$(terraform output -json 2>/dev/null | jq -r '.sync_destination_name.value // "aws-sm-eu-west-1"')
+        DEST_TYPE=$(terraform output -json 2>/dev/null | jq -r '.sync_destination_type.value // "aws-sm"')
+        NAMESPACE=$(terraform output -json 2>/dev/null | jq -r '.namespace_path.value // "admin/tn001"')
+
+        if [ -z "$DEST_NAME" ] || [ -z "$DEST_TYPE" ] || [ -z "$NAMESPACE" ]; then
+          echo "⚠ Unable to get sync destination details from terraform outputs."
+          echo "Run 'task apply' first to create the sync destination."
+          exit 1
+        fi
+
+        echo "=== Checking Sync Destination Associations ==="
+        echo ""
+        echo "Destination: $DEST_TYPE/$DEST_NAME"
+        echo "Namespace: $NAMESPACE"
+        echo ""
+
+        JSON=$(vault read -namespace=$NAMESPACE -format=json sys/sync/destinations/$DEST_TYPE/$DEST_NAME/associations)
+        echo "$JSON" | jq
+
+        echo ""
+        COUNT=$(echo "$JSON" | jq -r '.data.associated_secrets // {} | to_entries | length')
+        SYNCED_COUNT=$(echo "$JSON" | jq -r '[.data.associated_secrets // {} | to_entries[] | select(.value.sync_status == "SYNCED")] | length')
+        echo "Synced: $SYNCED_COUNT"
+        echo "Total: $COUNT"
+
+    silent: true
+
+  cleanup-sync-destination:
+    desc: delete vault sync destination with purge (removes all associations)
+    preconditions:
+      - sh: vault status
+        msg: "Vault is not running or unsealed"
+    cmds:
+      - |
+        DEST_NAME=$(terraform output -json 2>/dev/null | jq -r '.sync_destination_name.value // "aws-sm-eu-west-1"')
+        DEST_TYPE=$(terraform output -json 2>/dev/null | jq -r '.sync_destination_type.value // "aws-sm"')
+        NAMESPACE=$(terraform output -json 2>/dev/null | jq -r '.namespace_path.value // "admin/tn001"')
+
+        if [ -z "$DEST_NAME" ] || [ -z "$DEST_TYPE" ] || [ -z "$NAMESPACE" ]; then
+          echo "⚠ Unable to get sync destination details from terraform outputs."
+          echo "Sync destination may already be deleted or terraform has not been applied."
+          exit 0
+        fi
+
+        echo "=== Cleaning Up Sync Destination ==="
+        echo ""
+        echo "Destination: $DEST_TYPE/$DEST_NAME"
+        echo "Namespace: $NAMESPACE"
+        echo ""
+
+        # Check current associations
+        echo "Checking current associations..."
+        COUNT=$(vault read -namespace=$NAMESPACE -format=json sys/sync/destinations/$DEST_TYPE/$DEST_NAME/associations 2>/dev/null | jq -r '.data.associated_secrets // {} | to_entries | length')
+        if [ -z "$COUNT" ] || [ "$COUNT" = "null" ]; then
+          COUNT=0
+        fi
+        echo "Found $COUNT association(s)"
+        echo ""
+
+        # If no associations found, sync destination likely already deleted
+        if [ "$COUNT" -eq 0 ]; then
+          echo "✓ Sync destination already removed or does not exist"
+          exit 0
+        fi
+
+        # Delete sync destination using Vault API with purge=true
+        # https://developer.hashicorp.com/vault/api-docs/system/secrets-sync#delete-destination
+        echo "Deleting sync destination with purge=true (forces removal of all associations)..."
+
+        HTTP_CODE=$(curl -sk -X DELETE \
+          -H "X-Vault-Token: $VAULT_TOKEN" \
+          -H "X-Vault-Namespace: $NAMESPACE" \
+          -w "%{http_code}" \
+          -o /dev/null \
+          "$VAULT_ADDR/v1/sys/sync/destinations/$DEST_TYPE/$DEST_NAME?purge=true")
+
+        if [ "$HTTP_CODE" = "204" ] || [ "$HTTP_CODE" = "200" ]; then
+          echo "✓ Sync destination deleted successfully"
+        elif [ "$HTTP_CODE" = "404" ]; then
+          echo "⚠ Sync destination not found (may already be deleted)"
+        else
+          echo "⚠ Unexpected response code: $HTTP_CODE"
+        fi
+        echo ""
+
+        # Verify associations are removed
+        echo "Verifying sync associations have been removed..."
+        vault read -namespace=$NAMESPACE -format=json sys/sync/destinations/$DEST_TYPE/$DEST_NAME/associations 2>/dev/null || VERIFY_EXIT=$?
+        if [ "${VERIFY_EXIT:-0}" -ne 0 ]; then
+          echo "✓ Sync destination and associations removed"
+        else
+          echo "⚠ Sync destination may still exist"
+        fi
+
+        # Remove sync association from terraform state
+        echo ""
+        echo "Removing sync associations from Terraform state..."
+        terraform state rm 'vault_secrets_sync_association.test_secrets' 2>/dev/null || true
+        echo "✓ State cleanup complete"
+    silent: true
+
   destroy:
     desc: destroy terraform resources and cleanup sync associations
     preconditions:
       - sh: vault status
         msg: "Vault is not running or unsealed"
-      - sh: test -f terraform.tfstate
-        msg: "No terraform state found. Nothing to destroy."
     cmds:
-      - |
-        echo "=== Cleaning up AWS Secrets Sync Lab ==="
-        echo ""
-
-        # Get configuration from Terraform state file (before destroy starts)
-        echo "Reading configuration from Terraform state file..."
-        NAMESPACE=$(terraform show -json 2>/dev/null | jq -r '.values.outputs.namespace_path.value // "admin/tn001"')
-        DEST_TYPE=$(terraform show -json 2>/dev/null | jq -r '.values.outputs.sync_destination_type.value // "aws-sm"')
-        DEST_NAME=$(terraform show -json 2>/dev/null | jq -r '.values.outputs.sync_destination_name.value // "aws-sm-eu-west-1"')
-
-        echo "Namespace: $NAMESPACE"
-        echo "Destination: $DEST_TYPE/$DEST_NAME"
-        echo ""
-
-        # Remove sync associations via Vault API
-        # https://developer.hashicorp.com/vault/api-docs/system/secrets-sync#remove-association
-        echo "Removing sync associations..."
-        ASSOCIATIONS=$(vault read -namespace="$NAMESPACE" -format=json \
-          "sys/sync/destinations/$DEST_TYPE/$DEST_NAME/associations" 2>/dev/null | \
-          jq -r '.data.associated_secrets | to_entries | .[] | "\(.value.mount):\(.value.secret_name)"' 2>/dev/null)
-
-        if [ -z "$ASSOCIATIONS" ]; then
-          echo "No sync associations found or destination already removed."
-        else
-          for assoc in $ASSOCIATIONS; do
-            MOUNT=$(echo "$assoc" | cut -d: -f1)
-            SECRET=$(echo "$assoc" | cut -d: -f2)
-            echo "  Removing association: $MOUNT/$SECRET"
-            if vault write -namespace="$NAMESPACE" \
-              "sys/sync/destinations/$DEST_TYPE/$DEST_NAME/associations/remove" \
-              mount="$MOUNT" \
-              secret_name="$SECRET" > /dev/null 2>&1; then
-              echo "    ✓ Removed"
-            else
-              echo "    ⚠ Failed to remove (may already be deleted)"
-            fi
-          done
-        fi
-        echo ""
-      - task: cleanup-aws
       - terraform destroy -auto-approve
-    silent: true
 
   verify-aws:
     desc: verify aws secrets have been created
@@ -177,11 +236,15 @@ tasks:
           echo "  - $secret_name"
         done
         echo ""
-        echo "WARNING: This will permanently delete all Vault-managed secrets from AWS Secrets Manager!"
-        echo "Press Ctrl+C to cancel, or press Enter to continue..."
-        read
 
-        echo ""
+        # Skip prompt if SKIP_PROMPT is set (used by destroy task)
+        if [ "${SKIP_PROMPT}" != "true" ]; then
+          echo "WARNING: This will permanently delete all Vault-managed secrets from AWS Secrets Manager!"
+          echo "Press Ctrl+C to cancel, or press Enter to continue..."
+          read
+          echo ""
+        fi
+
         echo "Deleting secrets..."
         for arn in $SECRET_ARNS; do
           secret_name=$(echo $arn | rev | cut -d: -f1 | rev)
@@ -189,16 +252,17 @@ tasks:
           aws secretsmanager delete-secret \
             --region ${AWS_REGION:-eu-west-1} \
             --secret-id "$arn" \
-            --force-delete-without-recovery 2>/dev/null || echo "  Failed to delete (may already be deleted)"
+            --force-delete-without-recovery 2>/dev/null || echo "  ⚠ Failed to delete (may already be deleted)"
         done
 
         echo ""
         echo "Cleanup complete. Verifying remaining secrets:"
-        aws secretsmanager list-secrets \
+        REMAINING=$(aws secretsmanager list-secrets \
           --region ${AWS_REGION:-eu-west-1} \
           --filters Key=tag-key,Values=ManagedBy Key=tag-value,Values=Vault \
           --query 'length(SecretList)' \
-          --output text
+          --output text)
+        echo "Remaining Vault-managed secrets: $REMAINING"
     silent: true
 
   all:
@@ -234,15 +298,8 @@ tasks:
   secrets:refresh:
     desc: refresh aws secrets to see sync in action
     cmds:
-      - |
-        # execute terraform apply -refresh to each secret to trigger a refresh
-        echo "Refreshing secrets in Terraform to trigger AWS sync..."
-        SECRET_RESOURCES=(
-            'vault_secrets_sync_association.test_secrets["app1_secrets"]'
-            'vault_secrets_sync_association.test_secrets["app2_secrets"]'
-        )
-        for resource in "${SECRET_RESOURCES[@]}"; do
-            echo "Refreshing resource: $resource"
-            terraform apply -refresh -target="$resource" -auto-approve
-        done
-        echo "Secrets refreshed. AWS Secrets Manager will reflect changes shortly."
+      - echo "Refreshing sync associations to trigger AWS sync..."
+      - terraform apply -replace='vault_secrets_sync_association.test_secrets' -auto-approve
+      - task: verify-aws
+      - task: verify-sync
+

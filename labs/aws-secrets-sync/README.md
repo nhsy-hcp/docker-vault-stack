@@ -9,7 +9,7 @@ This lab demonstrates HashiCorp Vault's AWS Secrets Manager synchronization feat
 - **Secrets Engine**: KV v2 mount at `kv-sync`
 - **Test Secrets**: Two example secrets demonstrating different use cases
   - `app1_secrets`: API keys for external services (SendGrid, Datadog)
-  - `app2_secrets`: Application security secrets (JWT, encryption, webhooks)
+  - `app2_secrets`: Webhook security secret
 - **Sync Destination**: AWS Secrets Manager in eu-west-1
 - **Granularity**: Secret-path level (entire secret syncs as one AWS secret)
 
@@ -46,31 +46,49 @@ With `granularity = "secret-path"`, the entire secret (all keys and values) sync
 ### AWS Setup
 1. AWS account with appropriate permissions
 2. AWS credentials configured (via environment variables or AWS CLI)
-3. IAM permissions for Secrets Manager operations
+3. IAM role for Vault to assume with Secrets Manager permissions
 
-### Required IAM Permissions
+### IAM Configuration
 
-Apply the IAM policy from `iam-policy.json` to your AWS user or role:
+The lab automatically creates an IAM role that Vault assumes to sync secrets to AWS Secrets Manager. The role is defined in `iam.tf` and includes:
 
-```bash
-# Using AWS CLI
-aws iam put-user-policy \
-  --user-name your-vault-user \
-  --policy-name VaultSecretsSync \
-  --policy-document file://iam-policy.json
+**IAM Role**: `vault-secrets-sync-role` (configurable via `secrets_sync_role_name` variable)
 
-# Or attach to existing role
-aws iam put-role-policy \
-  --role-name your-vault-role \
-  --policy-name VaultSecretsSync \
-  --policy-document file://iam-policy.json
-```
+**Trust Policy**: Automatically allows the current AWS session caller identity to assume the role. This can be overridden by specifying the `trust_policy_arns` variable.
 
-The policy grants Vault permissions to:
+**Permissions Granted**:
 - Create, update, and delete secrets in AWS Secrets Manager
 - Tag and untag secrets
 - List secrets for verification
 - Scope limited to secrets with `vault/*` prefix
+
+**Auto-Detection (Default)**:
+By default, the trust policy automatically allows your current AWS session to assume the role. No manual configuration is required.
+
+```bash
+# The lab automatically detects your current identity
+aws sts get-caller-identity
+
+# Apply without additional configuration
+terraform apply
+```
+
+**Manual Configuration (Optional)**:
+To specify different IAM principals or multiple principals, configure the `trust_policy_arns` variable in `terraform.tfvars`:
+
+```hcl
+# terraform.tfvars
+trust_policy_arns = [
+  "arn:aws:iam::123456789012:user/vault-user",
+  "arn:aws:iam::123456789012:role/vault-automation-role"
+]
+```
+
+**Verify Trust Policy**:
+After applying, check which ARNs are configured:
+```bash
+terraform output trust_policy_arns
+```
 
 ## Setup
 
@@ -201,6 +219,22 @@ The output shows:
 
 The lab includes Taskfile tasks for automated secret management and testing:
 
+#### verify-sync
+
+Checks the current sync destination associations status:
+
+```bash
+task verify-sync
+```
+
+This task displays:
+- Sync destination type and name
+- Current namespace
+- Associated secrets in JSON format
+- Sync status for all associations
+
+Use this to monitor which secrets are currently synced to AWS and their status.
+
 #### secrets:update
 
 Updates secrets in Vault with new values to trigger AWS sync:
@@ -329,8 +363,6 @@ locals {
     app2_secrets = {
       description = "app2 secrets"
       data = {
-        jwt_secret     = "jwt_signing_key_xyz789abc"
-        encryption_key = "aes256_key_for_encryption"
         webhook_secret = "webhook_verify_secret_123"
       }
     }
@@ -372,9 +404,16 @@ resource "vault_kv_secret_v2" "test_secrets" {
    aws sts get-caller-identity
    ```
 
-2. Verify IAM permissions:
+2. Verify IAM role and permissions:
    ```bash
-   aws iam get-user-policy --user-name your-user --policy-name VaultSecretsSync
+   # Check the IAM role exists
+   terraform output iam_role_arn
+
+   # Verify role trust policy
+   aws iam get-role --role-name vault-secrets-sync-role
+
+   # Check attached policies
+   aws iam list-attached-role-policies --role-name vault-secrets-sync-role
    ```
 
 3. Check Vault logs for errors:
@@ -440,13 +479,24 @@ resource "vault_kv_secret_v2" "test_secrets" {
 
 3. Check for credential conflicts (profile vs environment variables)
 
-4. Test with explicit credentials in Terraform (for debugging only):
-   ```hcl
-   resource "vault_secrets_sync_aws_destination" "aws_sm" {
-     access_key_id     = var.aws_access_key_id
-     secret_access_key = var.aws_secret_access_key
-     # ...
-   }
+4. Verify your IAM principal can assume the Vault sync role:
+   ```bash
+   # Test assuming the role
+   aws sts assume-role \
+     --role-arn $(terraform output -raw iam_role_arn) \
+     --role-session-name test-session
+   ```
+
+5. Check which IAM principals are allowed in the trust policy:
+   ```bash
+   # View the auto-detected or configured ARNs
+   terraform output trust_policy_arns
+
+   # Check your current identity
+   aws sts get-caller-identity
+
+   # If manually configured, verify terraform.tfvars
+   grep trust_policy_arns terraform.tfvars
    ```
 
 ### Namespace Not Found
@@ -472,34 +522,76 @@ resource "vault_kv_secret_v2" "test_secrets" {
 
 ## Cleanup
 
-The lab includes automated cleanup tasks:
+The lab includes automated cleanup tasks for safe and complete resource removal:
+
+### Cleanup Tasks Reference
+
+| Task | Description | When to Use |
+|------|-------------|-------------|
+| `task verify-sync` | Check sync status | Before cleanup to see what will be removed |
+| `task cleanup-sync-destination` | Delete sync destination with purge | Remove sync destination and associations only |
+| `task destroy` | Complete cleanup | Remove everything (recommended) |
+| `task cleanup-aws` | Clean AWS secrets only | Remove orphaned AWS secrets after Terraform destroy |
 
 ### Option 1: Complete Cleanup (Recommended)
 
 ```bash
-# Remove Terraform resources and sync associations
+# Check what's currently synced
+task verify-sync
+
+# Destroy all Terraform-managed resources
 task destroy
 
-# Remove AWS secrets (requires confirmation)
+# Clean up AWS secrets (not removed by Terraform)
 task cleanup-aws
 ```
 
-The `task destroy` command:
-- Removes all sync associations via Vault API
-- Destroys all Terraform-managed resources
-- Automatically handles cleanup of Vault resources
+The `task destroy` command runs `terraform destroy -auto-approve` to remove all Terraform-managed resources including:
+- Vault secrets sync destination and associations
+- KV secrets engine and test secrets
+- IAM role and policies
+
+**Important**: AWS Secrets Manager secrets are NOT automatically deleted by Terraform due to AWS deletion protection. After destroying Terraform resources, you must run `task cleanup-aws` to remove the synced secrets from AWS.
+
+### Option 2: Step-by-Step Cleanup
+
+If you need more control over the cleanup process:
+
+```bash
+# Step 1: Remove sync destination and associations
+task cleanup-sync-destination
+
+# Step 2: Destroy Terraform resources
+terraform destroy
+
+# Step 3: Clean up any remaining AWS secrets
+task cleanup-aws
+```
+
+The `task cleanup-sync-destination` command:
+- Extracts sync destination details from Terraform output
+- Shows current association count
+- Deletes the sync destination using Vault API with `purge=true` flag
+- Verifies associations have been removed (gracefully handles expected errors)
+- Uses the [Vault Secrets Sync API](https://developer.hashicorp.com/vault/api-docs/system/secrets-sync#delete-destination)
 
 The `task cleanup-aws` command:
 - Lists all Vault-managed secrets in AWS Secrets Manager
-- Prompts for confirmation before deletion
+- Prompts for confirmation before deletion (unless SKIP_PROMPT=true)
 - Force deletes secrets without recovery period
 - Verifies cleanup completion
 
-### Option 2: Manual Cleanup
+### Option 3: Manual Cleanup
 
-If you prefer manual cleanup:
+If you prefer complete manual control:
 
 ```bash
+# Delete sync destination via API
+curl -sk -X DELETE \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -H "X-Vault-Namespace: admin/tn001" \
+  "$VAULT_ADDR/v1/sys/sync/destinations/aws-sm/<destination-name>?purge=true"
+
 # Destroy Terraform resources
 terraform destroy
 
@@ -508,7 +600,10 @@ aws secretsmanager list-secrets --region eu-west-1 --filters Key=tag-key,Values=
 aws secretsmanager delete-secret --region eu-west-1 --secret-id <secret-id> --force-delete-without-recovery
 ```
 
-**Note**: AWS secrets are NOT automatically deleted by Terraform due to AWS deletion protection. You must use `task cleanup-aws` or manually delete them.
+**Important Notes**:
+- The `purge=true` parameter is critical when deleting sync destinations - it forces removal of all associations
+- AWS secrets are NOT automatically deleted by Terraform due to AWS deletion protection
+- Always use `task cleanup-aws` or manually delete AWS secrets after running `task destroy`
 
 ## Additional Resources
 
