@@ -120,17 +120,6 @@ services:
     depends_on:
       - loki
 
-#  json-exporter:
-#    image: quay.io/prometheuscommunity/json-exporter:${JSON_EXPORTER_VERSION:-latest}
-#    container_name: ${COMPOSE_PROJECT_NAME}_json-exporter
-#    restart: unless-stopped
-#    ports:
-#      - "7979:7979"
-#    volumes:
-#      - ./volumes/json-exporter/config.yml:/config.yml:ro
-#      - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
-#
-
 configs:
   vault-config:
     file: ./volumes/vault/raft.hcl

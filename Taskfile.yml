@@ -9,7 +9,10 @@ vars:
 
 tasks:
   default:
-    aliases: ["all"]
+    cmds:
+      - task --list
+
+  all:
     cmds:
       - task: up
       - task: unseal
@@ -92,7 +95,8 @@ tasks:
 
   benchmark:
     cmds:
-    - vault-benchmark run -config=./benchmark/config.hcl
+      - vault namespace create vault-benchmark || true
+      - vault-benchmark run -config=./benchmark/config.hcl
 
   metrics:
     cmds:
@@ -255,3 +259,6 @@ tasks:
           vault token lookup -accessor $accessor || echo "Token not found or expired"
           echo ""
         done
+
+  license:
+    cmd:  vault read -format=json /sys/license/status | jq '.data'

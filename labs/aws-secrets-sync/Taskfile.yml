@@ -1,0 +1,248 @@
+# https://taskfile.dev
+
+version: '3'
+
+env:
+  AWS_PAGER: ""
+
+tasks:
+
+  prereqs:
+    desc: check and create admin/tn001 namespace if it doesn't exist
+    preconditions:
+      - sh: vault status
+        msg: "Vault is not running or unsealed. Run 'task up' and 'task unseal' first."
+    cmds:
+      - |
+        echo "Checking for admin namespace..."
+        if ! vault namespace list -format=json | jq -e '.[] | select(. == "admin/")' > /dev/null 2>&1; then
+          echo "Creating admin namespace..."
+          vault namespace create admin
+          echo "✓ admin namespace created"
+        else
+          echo "✓ admin namespace exists"
+        fi
+      - |
+        echo "Checking for admin/tn001 namespace..."
+        if ! vault namespace list -namespace=admin -format=json | jq -e '.[] | select(. == "tn001/")' > /dev/null 2>&1; then
+          echo "Creating tn001 namespace under admin..."
+          vault namespace create -namespace=admin tn001
+          echo "✓ admin/tn001 namespace created"
+        else
+          echo "✓ admin/tn001 namespace exists"
+        fi
+        echo ""
+        echo "Namespace check complete. admin/tn001 is ready for use."
+    silent: true
+
+  init:
+    desc: initialize terraform
+    preconditions:
+      - sh: vault status
+        msg: "Vault is not running or unsealed"
+    cmds:
+      - terraform init
+
+  plan:
+    desc: plan terraform changes
+    preconditions:
+      - sh: vault status
+        msg: "Vault is not running or unsealed"
+      - sh: test -f .terraform.lock.hcl
+        msg: "Terraform not initialized. Run 'task init' first"
+    cmds:
+      - terraform plan
+
+  apply:
+    desc: apply terraform configuration
+    preconditions:
+      - sh: vault status
+        msg: "Vault is not running or unsealed"
+      - sh: test -f .terraform.lock.hcl
+        msg: "Terraform not initialized. Run 'task init' first"
+    cmds:
+      - terraform apply
+
+  output:
+    desc: show terraform outputs
+    cmds:
+      - terraform output
+
+  destroy:
+    desc: destroy terraform resources and cleanup sync associations
+    preconditions:
+      - sh: vault status
+        msg: "Vault is not running or unsealed"
+      - sh: test -f terraform.tfstate
+        msg: "No terraform state found. Nothing to destroy."
+    cmds:
+      - |
+        echo "=== Cleaning up AWS Secrets Sync Lab ==="
+        echo ""
+
+        # Get configuration from Terraform state file (before destroy starts)
+        echo "Reading configuration from Terraform state file..."
+        NAMESPACE=$(terraform show -json 2>/dev/null | jq -r '.values.outputs.namespace_path.value // "admin/tn001"')
+        DEST_TYPE=$(terraform show -json 2>/dev/null | jq -r '.values.outputs.sync_destination_type.value // "aws-sm"')
+        DEST_NAME=$(terraform show -json 2>/dev/null | jq -r '.values.outputs.sync_destination_name.value // "aws-sm-eu-west-1"')
+
+        echo "Namespace: $NAMESPACE"
+        echo "Destination: $DEST_TYPE/$DEST_NAME"
+        echo ""
+
+        # Remove sync associations via Vault API
+        # https://developer.hashicorp.com/vault/api-docs/system/secrets-sync#remove-association
+        echo "Removing sync associations..."
+        ASSOCIATIONS=$(vault read -namespace="$NAMESPACE" -format=json \
+          "sys/sync/destinations/$DEST_TYPE/$DEST_NAME/associations" 2>/dev/null | \
+          jq -r '.data.associated_secrets | to_entries | .[] | "\(.value.mount):\(.value.secret_name)"' 2>/dev/null)
+
+        if [ -z "$ASSOCIATIONS" ]; then
+          echo "No sync associations found or destination already removed."
+        else
+          for assoc in $ASSOCIATIONS; do
+            MOUNT=$(echo "$assoc" | cut -d: -f1)
+            SECRET=$(echo "$assoc" | cut -d: -f2)
+            echo "  Removing association: $MOUNT/$SECRET"
+            if vault write -namespace="$NAMESPACE" \
+              "sys/sync/destinations/$DEST_TYPE/$DEST_NAME/associations/remove" \
+              mount="$MOUNT" \
+              secret_name="$SECRET" > /dev/null 2>&1; then
+              echo "    ✓ Removed"
+            else
+              echo "    ⚠ Failed to remove (may already be deleted)"
+            fi
+          done
+        fi
+        echo ""
+      - task: cleanup-aws
+      - terraform destroy -auto-approve
+    silent: true
+
+  verify-aws:
+    desc: verify aws secrets have been created
+    preconditions:
+      - sh: command -v aws
+        msg: "AWS CLI not found. Install it: https://aws.amazon.com/cli/"
+      - sh: aws sts get-caller-identity > /dev/null 2>&1
+        msg: "AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
+    cmds:
+      - |
+        echo "=== Verifying AWS Secrets Manager Secrets ==="
+        echo ""
+        echo "Listing Vault-managed secrets in AWS Secrets Manager:"
+        aws secretsmanager list-secrets \
+          --region ${AWS_REGION:-eu-west-1} \
+          --filters Key=tag-key,Values=ManagedBy Key=tag-value,Values=Vault \
+          --query 'SecretList[*].[Name,ARN,CreatedDate]' \
+          --output table
+        echo ""
+        echo "Total count:"
+        aws secretsmanager list-secrets \
+          --region ${AWS_REGION:-eu-west-1} \
+          --filters Key=tag-key,Values=ManagedBy Key=tag-value,Values=Vault \
+          --query 'length(SecretList)' \
+          --output text
+        echo ""
+        echo "To get a specific secret value, use:"
+        echo "  aws secretsmanager get-secret-value --region ${AWS_REGION:-eu-west-1} --secret-id <secret-name> --query SecretString --output text"
+    silent: true
+
+  cleanup-aws:
+    desc: cleanup aws secrets manager secrets created by vault sync
+    preconditions:
+      - sh: command -v aws
+        msg: "AWS CLI not found. Install it: https://aws.amazon.com/cli/"
+      - sh: aws sts get-caller-identity > /dev/null 2>&1
+        msg: "AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
+    cmds:
+      - |
+        echo "=== Cleaning up AWS Secrets Manager Secrets ==="
+        echo ""
+        echo "Finding Vault-managed secrets..."
+        SECRET_ARNS=$(aws secretsmanager list-secrets \
+          --region ${AWS_REGION:-eu-west-1} \
+          --filters Key=tag-key,Values=ManagedBy Key=tag-value,Values=Vault \
+          --query 'SecretList[*].ARN' \
+          --output text)
+
+        if [ -z "$SECRET_ARNS" ]; then
+          echo "No Vault-managed secrets found in AWS Secrets Manager."
+          exit 0
+        fi
+
+        echo "Found secrets to delete:"
+        for arn in $SECRET_ARNS; do
+          secret_name=$(echo $arn | rev | cut -d: -f1 | rev)
+          echo "  - $secret_name"
+        done
+        echo ""
+        echo "WARNING: This will permanently delete all Vault-managed secrets from AWS Secrets Manager!"
+        echo "Press Ctrl+C to cancel, or press Enter to continue..."
+        read
+
+        echo ""
+        echo "Deleting secrets..."
+        for arn in $SECRET_ARNS; do
+          secret_name=$(echo $arn | rev | cut -d: -f1 | rev)
+          echo "Deleting: $secret_name"
+          aws secretsmanager delete-secret \
+            --region ${AWS_REGION:-eu-west-1} \
+            --secret-id "$arn" \
+            --force-delete-without-recovery 2>/dev/null || echo "  Failed to delete (may already be deleted)"
+        done
+
+        echo ""
+        echo "Cleanup complete. Verifying remaining secrets:"
+        aws secretsmanager list-secrets \
+          --region ${AWS_REGION:-eu-west-1} \
+          --filters Key=tag-key,Values=ManagedBy Key=tag-value,Values=Vault \
+          --query 'length(SecretList)' \
+          --output text
+    silent: true
+
+  all:
+    desc: complete setup for aws secrets sync lab
+    cmds:
+      - task: prereqs
+      - task: init
+      - task: plan
+      - task: apply
+      - echo ""
+      - echo "View synced secrets:"
+      - task: output
+      - echo ""
+      - echo "Verify secrets in AWS:"
+      - task: verify-aws
+      - echo ""
+
+  secrets:update:
+    desc: refresh aws secrets to see sync in action
+    cmds:
+      - |
+        echo "Replacing secrets in Vault to trigger AWS sync..."
+        SECRET_PATHS=(
+          "kv-sync/app1_secrets"
+          "kv-sync/app2_secrets"
+        )
+        for path in "${SECRET_PATHS[@]}"; do
+          echo "Updating secret at: $path"
+          vault kv put -namespace=admin/tn001 "$path" username="user_$(date +%s)" password="pass_$(date +%s)"
+        done
+        echo "Secrets updated. AWS Secrets Manager will reflect changes shortly."
+
+  secrets:refresh:
+    desc: refresh aws secrets to see sync in action
+    cmds:
+      - |
+        # execute terraform apply -refresh to each secret to trigger a refresh
+        echo "Refreshing secrets in Terraform to trigger AWS sync..."
+        SECRET_RESOURCES=(
+            'vault_secrets_sync_association.test_secrets["app1_secrets"]'
+            'vault_secrets_sync_association.test_secrets["app2_secrets"]'
+        )
+        for resource in "${SECRET_RESOURCES[@]}"; do
+            echo "Refreshing resource: $resource"
+            terraform apply -refresh -target="$resource" -auto-approve
+        done
+        echo "Secrets refreshed. AWS Secrets Manager will reflect changes shortly."
