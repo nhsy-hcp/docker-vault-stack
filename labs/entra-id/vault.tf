@@ -9,7 +9,7 @@ resource "vault_namespace" "tn001" {
 
 # Enable the JWT auth method for root namespace
 resource "vault_jwt_auth_backend" "root" {
-  path               = "azure"
+  path               = var.vault_oidc_mount_path
   type               = "oidc"
   oidc_client_id     = azuread_application.vault.client_id
   oidc_client_secret = azuread_application_password.vault.value
@@ -38,18 +38,19 @@ resource "vault_jwt_auth_backend_role" "root" {
 
   allowed_redirect_uris = local.redirect_uris
   # verbose_oidc_logging  = true
+  token_bound_cidrs = ["192.168.0.0/16"] #  Restrict admin logins to allowed cidr ranges
 
-  claim_mappings = {
-    name = "name"
-    oid  = "oid"
-    upn  = "upn"
-  }
+  # claim_mappings = {
+  #   name = "name"
+  #   oid  = "oid"
+  #   upn  = "upn"
+  # }
 }
 
 # Enable the JWT auth method for admin namespace
 resource "vault_jwt_auth_backend" "admin" {
   namespace          = vault_namespace.admin.path
-  path               = "azure"
+  path               = var.vault_oidc_mount_path
   type               = "oidc"
   oidc_client_id     = azuread_application.vault.client_id
   oidc_client_secret = azuread_application_password.vault.value
@@ -80,9 +81,9 @@ resource "vault_jwt_auth_backend_role" "admin" {
   allowed_redirect_uris = local.redirect_uris
   # verbose_oidc_logging  = true
 
-  claim_mappings = {
-    name = "name"
-    oid  = "oid"
-    upn  = "upn"
-  }
+  # claim_mappings = {
+  #   name = "name"
+  #   oid  = "oid"
+  #   upn  = "upn"
+  # }
 }

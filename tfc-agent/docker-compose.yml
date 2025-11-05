@@ -9,8 +9,10 @@ services:
     environment:
       TFC_AGENT_NAME: localhost-agent
       TFC_AGENT_SINGLE: true
+      TFC_AGENT_LOG_LEVEL: info
+      TFC_AGENT_AUTO_UPDATE: disabled
     deploy:
-      replicas: 2
+      replicas: 1
 networks:
   default:
     name: docker-vault-stack

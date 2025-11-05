@@ -257,14 +257,248 @@ After successful deployment:
    vault login -method=oidc -path=azure -namespace=admin
    ```
 
+## Understanding Namespace-Aware Authentication
+
+One of the most important concepts when using Vault identity groups with Azure AD is understanding how **namespace context affects policy resolution**.
+
+### The Problem: Missing Identity Policies
+
+When you authenticate via the root namespace and run `vault token lookup`, you might see:
+
+```
+token_policies       ["default"]
+identity_policies    []
+policies             ["default"]
+```
+
+Notice `identity_policies` is empty, even though you're a member of Azure AD groups that should grant additional policies. This happens because **the namespace where you authenticate determines which identity group aliases can match your Azure AD groups**.
+
+### How Identity Groups Work Across Namespaces
+
+This lab creates a hierarchical identity group structure:
+
+```
+Azure AD Groups                     Vault External Groups              Vault Internal Groups
+(in Azure)                          (in admin namespace)               (in admin/tn001 namespace)
+┌─────────────────────────┐        ┌──────────────────────────┐       ┌───────────────────────────┐
+│ vault-tn001-team1-reader│───────>│ entra-vault-tn001-team1- │──────>│ entra-vault-tn001-team1-  │
+│ (Azure AD Object ID)    │        │ reader-external          │       │ reader-internal           │
+└─────────────────────────┘        │ (type: external)         │       │ (type: internal)          │
+                                   │ (has group alias)        │       │ (has policy)              │
+                                   └──────────────────────────┘       │ Policy: entra-tn001-      │
+                                                                      │ team1-reader              │
+                                                                      └───────────────────────────┘
+```
+
+**The key point:** The external group and its alias exist in the **admin** namespace, not the root namespace.
+
+### Authentication in Different Namespaces
+
+**Root Namespace (`auth/azure`):**
+- Bound to `vault-admin` Azure AD group
+- Only applies policies from root-level identity groups
+- External group aliases in other namespaces are NOT evaluated
+
+**Admin Namespace (`auth/azure` in admin):**
+- Bound to `vault-user` Azure AD group
+- Evaluates external group aliases in admin namespace
+- Internal groups inherit from external groups
+- Policies from nested namespaces (like admin/tn001) are applied
+
+### How to Authenticate in Admin Namespace
+
+**CLI Method:**
+```bash
+vault login -namespace=admin -method=oidc role=default
+```
+
+**UI Method:**
+```
+https://127.0.0.1:8200/ui/vault/auth?namespace=admin&with=oidc%2Fdefault
+```
+
+**API Method:**
+```bash
+vault write -namespace=admin auth/azure/oidc/auth role=default \
+    redirect_uri=http://localhost:8250/oidc/callback
+```
+
+### Verifying Your Policies
+
+After authenticating, check your effective policies:
+
+```bash
+# View all policies
+VAULT_NAMESPACE=admin vault token lookup
+
+# Or use the inspection script
+./check-policies.sh
+```
+
+You should now see:
+```
+token_policies       ["default"]
+identity_policies    ["entra-tn001-team1-reader"]
+policies             ["default", "entra-tn001-team1-reader"]
+```
+
+## Helper Scripts
+
+This lab includes two scripts to help you understand identity groups and policy resolution:
+
+### 1. Authentication Demo (`demo-auth.sh`)
+
+Demonstrates the difference between root and admin namespace authentication:
+
+```bash
+./demo-auth.sh
+```
+
+This script shows:
+- How token policies differ between namespaces
+- Which identity groups are active in each context
+- The flow of external → internal group membership
+
+### 2. Policy Inspector (`check-policies.sh`)
+
+Analyzes your current token and shows detailed policy information:
+
+```bash
+./check-policies.sh
+```
+
+This script displays:
+- Your entity ID and entity details
+- All group memberships (external and internal)
+- Policies from each group
+- Policy resolution chain
+- Helpful tips if you're in the wrong namespace
+
+**Example output:**
+```
+=== Group Memberships ===
+[1] Group: entra-vault-tn001-team1-reader-external
+    ID: abc123...
+    Type: external
+    Namespace: admin
+    Policies: none
+    Azure AD Group ID: bc1a2d07-2023-434b-b2ec-7bd0dc4b1fd3
+
+[2] Group: entra-vault-tn001-team1-reader-internal
+    ID: def456...
+    Type: internal
+    Namespace: admin/tn001
+    Policies: entra-tn001-team1-reader
+    Member Groups:
+      - entra-vault-tn001-team1-reader-external (ID: abc123...)
+```
+
+## Common Scenarios
+
+### Scenario 1: Admin User (vault-admin group)
+
+**Azure AD Membership:** vault-admin
+
+**Authenticate in Root:**
+```bash
+vault login -method=oidc role=default
+```
+
+**Result:**
+- Token policies: `["default"]`
+- Identity policies: `["entra-admin"]`
+- Can manage Vault in root namespace
+
+### Scenario 2: Team User (vault-tn001-team1-reader group)
+
+**Azure AD Membership:** vault-user, vault-tn001-team1-reader
+
+**Authenticate in Admin:**
+```bash
+vault login -namespace=admin -method=oidc role=default
+```
+
+**Result:**
+- Token policies: `["default"]`
+- Identity policies: `["entra-tn001-team1-reader"]`
+- Can read team1 secrets in admin/tn001 namespace
+
+**Authenticate in Root (wrong namespace):**
+```bash
+vault login -method=oidc role=default
+```
+
+**Result:**
+- Token policies: `["default"]`
+- Identity policies: `[]`
+- Cannot access team secrets (no group membership)
+
+## Best Practices
+
+1. **Choose the Right Namespace:** Authenticate in the namespace where your identity groups are defined
+2. **Use Helper Scripts:** Run `check-policies.sh` to understand your current access
+3. **Understand Group Hierarchy:** External groups (group aliases) → Internal groups (policies)
+4. **Check Namespace Context:** Always verify `VAULT_NAMESPACE` when troubleshooting
+
 ## Troubleshooting
+
+### Issue: No Identity Policies
+
+**Symptoms:**
+```bash
+vault token lookup
+# identity_policies: []
+```
+
+**Diagnosis:**
+1. Run `./check-policies.sh` to see detailed information
+2. Check which namespace you authenticated in
+3. Verify your Azure AD group memberships
+
+**Solution:**
+Authenticate in the correct namespace where your group aliases are defined:
+```bash
+vault login -namespace=admin -method=oidc role=default
+```
+
+### Issue: Can't Access Nested Namespace Secrets
+
+**Symptoms:**
+```bash
+vault kv get -namespace=admin/tn001 team1/app1
+# Error: permission denied
+```
+
+**Diagnosis:**
+```bash
+./check-policies.sh
+# Check if you have the team-specific policy
+```
+
+**Solution:**
+Ensure you authenticated in admin namespace and are a member of the corresponding Azure AD group.
 
 ### Useful Commands
 
 ```bash
-# Check OIDC configuration
+# Check OIDC configuration in all namespaces
 vault auth list -detailed
+VAULT_NAMESPACE=admin vault auth list -detailed
 
-# Test group membership
+# View current token details
 vault token lookup
+
+# View current token in specific namespace context
+VAULT_NAMESPACE=admin vault token lookup
+
+# Check entity information
+ENTITY_ID=$(vault token lookup -format=json | jq -r '.data.entity_id')
+vault read identity/entity/id/$ENTITY_ID
+
+# List identity groups
+vault list identity/group/id
+VAULT_NAMESPACE=admin vault list identity/group/id
+
+# View specific group
+vault read identity/group/name/entra-vault-tn001-team1-reader-external
 ```

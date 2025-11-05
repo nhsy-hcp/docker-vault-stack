@@ -1,7 +1,6 @@
-variable "vault_addr" {
-  description = "Vault server address"
+variable "vault_oidc_mount_path" {
   type        = string
-  default     = "https://127.0.0.1:8200"
+  default     = "oidc"
 }
 
 variable "azure_groups" {
