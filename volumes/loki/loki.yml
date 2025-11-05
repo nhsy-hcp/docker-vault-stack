@@ -17,6 +17,14 @@ common:
     kvstore:
       store: inmemory
 
+compactor:
+  working_directory: /loki/data/retention
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 1h
+  retention_delete_worker_count: 10
+  delete_request_store: filesystem
+
 query_range:
   results_cache:
     cache:
@@ -35,6 +43,8 @@ schema_config:
         period: 24h
 
 limits_config:
+  retention_period: 7d
+  max_query_lookback: 7d
   max_line_size: 10MB
   max_line_size_truncate: false
   ingestion_rate_mb: 8
