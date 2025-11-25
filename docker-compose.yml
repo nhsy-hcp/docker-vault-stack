@@ -9,7 +9,7 @@ services:
       - .env # Contains VAULT_ADDR, VAULT_LICENSE
     environment:
       VAULT_LOG_LEVEL: ${VAULT_LOG_LEVEL:-info} # Default to 'info', allow override via .env
-      VAULT_CACERT: /vault/config/ca.crt # CA certificate for client validation
+      VAULT_CACERT: /vault/config/ca.crt # CA certificate for Vault CLI
     cap_add:
       - IPC_LOCK
     configs:
@@ -81,16 +81,15 @@ services:
     restart: unless-stopped
     ports:
       - "3100:3100"
-    configs:
-      - source: loki-config
-        target: /etc/loki/loki.yml
-      - source: loki-perm-fix
-        target: /loki/loki_perm_fix.sh
-        mode: 0755
+#    configs:
+#      - source: loki-config
+#        target: /etc/loki/loki.yml
     volumes:
+      - ./volumes/loki/loki.yml:/etc/loki/loki.yml:ro
       - loki-data:/loki/data
-#    command: -config.file=/etc/loki/loki.yml
-    entrypoint: /loki/loki_perm_fix.sh
+#      - ./volumes/loki/loki_perm_fix.sh:/loki/loki_perm_fix.sh:ro
+    command: -config.file=/etc/loki/loki.yml
+#    entrypoint: /loki/loki_perm_fix.sh
     user: root # Required for permission fix as Loki runs as user Loki by default
 
   alloy:
@@ -119,6 +118,7 @@ services:
       - --server.http.listen-addr=0.0.0.0:12345
     ports:
       - "12345:12345"
+    user: root
     depends_on:
       - loki
 
@@ -141,8 +141,6 @@ configs:
     file: ./volumes/prometheus/vault-rules.yml
   loki-config:
     file: ./volumes/loki/loki.yml
-  loki-perm-fix:
-    file: ./volumes/loki/loki_perm_fix.sh
   alloy-config:
     file: ./volumes/alloy/config.alloy
 

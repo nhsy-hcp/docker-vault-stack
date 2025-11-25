@@ -161,8 +161,11 @@ tasks:
     cmds:
       - |
         export VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')
+        {{ .CONTAINER_RUNTIME }} compose exec vault chown vault:vault /vault/logs
         ./scripts/30_vault_config.sh
+        {{ .CONTAINER_RUNTIME }} compose restart alloy
         {{ .CONTAINER_RUNTIME }} compose restart prometheus
+        
 
   shell:
     cmds:

@@ -9,7 +9,12 @@ max_attempts=5
 attempt=1
 
 while [ $attempt -le $max_attempts ]; do
-    if vault status >/dev/null 2>&1; then
+    # vault status returns exit code 0 (unsealed), 1 (error), or 2 (sealed)
+    # Both 0 and 2 mean Vault is accessible
+    vault status >/dev/null 2>&1
+    status_code=$?
+
+    if [ $status_code -eq 0 ] || [ $status_code -eq 2 ]; then
         echo "Vault is accessible."
         break
     fi
@@ -41,10 +46,10 @@ vault operator init -format=json | tee vault-init.json
 sed -i '' "s/VAULT_TOKEN=.*/VAULT_TOKEN=$(jq -r '.root_token' vault-init.json)/g" .env
 echo "Waiting for Vault to initialise..."
 sleep 20
-echo "Unsealing vault..."
-export VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')
-vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[0]')
-vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[1]')
-vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[2]')
-vault status
+#echo "Unsealing vault..."
+#export VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')
+#vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[0]')
+#vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[1]')
+#vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[2]')
+#vault status
 
