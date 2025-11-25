@@ -17,9 +17,11 @@ services:
         target: /vault/config/raft.hcl
       - source: vault-ca
         target: /vault/config/ca.crt
+      - source: vault-cert
+        target: /vault/config/localhost.crt
+      - source: vault-key
+        target: /vault/config/localhost.key
     volumes:
-      - ./volumes/vault/localhost.crt:/vault/config/localhost.crt:ro
-      - ./volumes/vault/localhost.key:/vault/config/localhost.key:ro
       - vault-data:/vault/file  # Need this volume to fudge permissions error
       - vault-logs:/vault/logs
     command: server
@@ -125,6 +127,10 @@ configs:
     file: ./volumes/vault/raft.hcl
   vault-ca:
     file: ./volumes/vault/ca.crt
+  vault-cert:
+    file: ./volumes/vault/localhost.crt
+  vault-key:
+    file: ./volumes/vault/localhost.key
   grafana-datasources:
     file: ./volumes/grafana/datasources.yml
   grafana-dashboards-config:

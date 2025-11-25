@@ -2,6 +2,29 @@
 set -o pipefail
 
 export VAULT_ADDR=https://127.0.0.1:8200
+
+# Check if Vault is accessible
+echo "Checking Vault connectivity..."
+max_attempts=5
+attempt=1
+
+while [ $attempt -le $max_attempts ]; do
+    if vault status >/dev/null 2>&1; then
+        echo "Vault is accessible."
+        break
+    fi
+
+    if [ $attempt -eq $max_attempts ]; then
+        echo "Error: Vault is not accessible at $VAULT_ADDR"
+        echo "Please ensure Vault is running with 'task up' before initializing."
+        exit 1
+    fi
+
+    echo "Attempt $attempt/$max_attempts: Waiting for Vault to become available..."
+    sleep 2
+    attempt=$((attempt + 1))
+done
+
 vault status
 
 if [ -f "vault-init.json" ]; then

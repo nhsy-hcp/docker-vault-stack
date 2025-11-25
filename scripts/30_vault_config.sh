@@ -63,8 +63,7 @@ chmod 600 "$TOKEN_FILE"
 print_status "Token file permissions set to 600"
 print_status "Vault configuration for Prometheus completed successfully!"
 
-
-vault audit enable -path="audit_log" file file_path=/vault/logs/vault_audit.log || true
+vault audit enable -path="audit_log" file file_path=/vault/logs/vault_audit.log chmod=0600 || true
 vault audit enable -path="audit_stdout" file file_path=stdout || true
 vault write sys/quotas/config enable_rate_limit_audit_logging=true
 print_status "Vault initialised, unsealed and audit logs enabled"
