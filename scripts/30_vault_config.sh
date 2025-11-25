@@ -71,8 +71,8 @@ vault write sys/quotas/config enable_rate_limit_audit_logging=true
 print_status "Vault initialised, unsealed and audit logs enabled"
 
 print_status "Setting vault token TTL..."
-vault write sys/auth/token/tune max_lease_ttl=30d
-vault write sys/auth/token/tune default_lease_ttl=7d
+vault write sys/auth/token/tune max_lease_ttl=720h #30d
+vault write sys/auth/token/tune default_lease_ttl=168h #7d
 print_status "Vault token TTL set to 30 days for max and 7 days for default"
 
 vault read sys/auth/token/tune
