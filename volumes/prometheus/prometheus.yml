@@ -4,7 +4,7 @@
 #    params:
 #      format: ['prometheus']
 #    scheme: https
-#    bearer_token_file: /etc/prometheus/prometheus-token
+#    #bearer_token_file: /etc/prometheus/prometheus-token
 #    static_configs:
 #    - targets: ['vault:8200']
 #    tls_config:

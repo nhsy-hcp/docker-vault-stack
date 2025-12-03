@@ -69,9 +69,6 @@ tasks:
     cmds:
       - |
         ./scripts/20_vault_unseal.sh
-        export VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')        
-        vault token renew $(cat ./volumes/prometheus/prometheus-token) || true
-        {{ .CONTAINER_RUNTIME }} compose restart prometheus || true
 
   backup:
     cmds:

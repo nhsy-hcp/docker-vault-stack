@@ -65,7 +65,7 @@ services:
       - source: prometheus-rules
         target: /etc/prometheus/vault-rules.yml
     volumes:
-      - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
+      #- ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -98,7 +98,7 @@ services:
     restart: unless-stopped
     environment:
       - VAULT_ADDR=https://vault:8200
-      - VAULT_TOKEN=/etc/prometheus/prometheus-token
+      #- VAULT_TOKEN=/etc/prometheus/prometheus-token
     configs:
       - source: alloy-config
         target: /etc/alloy/config.alloy
@@ -107,7 +107,7 @@ services:
     volumes:
       - alloy-data:/var/lib/alloy/data
       - vault-logs:/mnt/vault-logs:ro
-      - ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
+      #- ./volumes/prometheus/prometheus-token:/etc/prometheus/prometheus-token:ro
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro

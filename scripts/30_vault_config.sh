@@ -46,22 +46,23 @@ TOKEN_FILE="./volumes/prometheus/prometheus-token"
 # Ensure the directory exists
 mkdir -p "$(dirname "$TOKEN_FILE")"
 
-# Create token with prometheus-metrics policy
-vault token create \
-  -display-name="Prometheus Metrics Token" \
-  -field=token \
-  -policy prometheus-metrics \
-  -renewable=true \
-  -period=30d \
-  -metadata=purpose=prometheus \
-  -metadata=owner=nhsy \
-  -orphan=true \
-  > "$TOKEN_FILE"
-
-# Set appropriate permissions on token file
-chmod 600 "$TOKEN_FILE"
-print_status "Token file permissions set to 600"
-print_status "Vault configuration for Prometheus completed successfully!"
+# Removed prometheus-metrics token to simplify
+## Create token with prometheus-metrics policy
+#vault token create \
+#  -display-name="Prometheus Metrics Token" \
+#  -field=token \
+#  -policy prometheus-metrics \
+#  -renewable=true \
+#  -period=30d \
+#  -metadata=purpose=prometheus \
+#  -metadata=owner=nhsy \
+#  -orphan=true \
+#  > "$TOKEN_FILE"
+#
+## Set appropriate permissions on token file
+#chmod 600 "$TOKEN_FILE"
+#print_status "Token file permissions set to 600"
+#print_status "Vault configuration for Prometheus completed successfully!"
 
 vault audit enable -path="audit_log" file file_path=/vault/logs/vault_audit.log chmod=0644 || true
 vault audit enable -path="audit_stdout" file file_path=stdout || true

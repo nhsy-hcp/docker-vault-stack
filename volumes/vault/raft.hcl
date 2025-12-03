@@ -18,14 +18,15 @@ listener "tcp" {
   tls_key_file  = "/vault/config/localhost.key"
   tls_min_version = "tls12"
   tls_cipher_suites = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
-  # telemetry {
-  #   unauthenticated_metrics_access = true
-  # }
+  telemetry {
+    unauthenticated_metrics_access = true
+  }
 }
 
 telemetry {
   disable_hostname = true
-  prometheus_retention_time = "12h"
+  prometheus_retention_time = "24h"
+  unauthenticated_metrics_access = true
 }
 
 reporting {

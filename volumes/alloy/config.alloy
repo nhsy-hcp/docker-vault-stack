@@ -47,7 +47,7 @@ prometheus.scrape "vault" {
     format = ["prometheus"],
   }
   scheme = "https"
-  bearer_token_file = "/etc/prometheus/prometheus-token"
+  //bearer_token_file = "/etc/prometheus/prometheus-token"
   tls_config {
     ca_file = "/etc/ssl/certs/vault-ca.crt"
   }
