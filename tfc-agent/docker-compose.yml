@@ -2,7 +2,7 @@ services:
   tfc-agent:
     image: hashicorp/tfc-agent:latest
 #    container_name: tfc-agent
-    platform: linux/amd64
+    platform: linux/arm64
     restart: unless-stopped
     env_file:
       - .env # Contains TFC_AGENT_TOKEN

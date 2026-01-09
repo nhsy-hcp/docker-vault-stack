@@ -26,13 +26,14 @@ tasks:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
-      - test -f ./volumes/vault/ca.crt
-      - test -f ./volumes/vault/localhost.crt
-      - test -f ./volumes/vault/localhost.key
+#      - test -f ./volumes/vault/ca.crt
+#      - test -f ./volumes/vault/localhost.crt
+#      - test -f ./volumes/vault/localhost.key
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up -d --pull=missing
         sleep 5
+        echo "Alloy: http://localhost:12345"
         echo "Grafana: http://localhost:3000"
         echo "Prometheus: http://localhost:9090"
         echo "Vault: http://localhost:8200"
@@ -42,9 +43,9 @@ tasks:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
-      - test -f ./volumes/vault/ca.crt
-      - test -f ./volumes/vault/localhost.crt
-      - test -f ./volumes/vault/localhost.key
+#      - test -f ./volumes/vault/ca.crt
+#      - test -f ./volumes/vault/localhost.crt
+#      - test -f ./volumes/vault/localhost.key
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up vault -d --pull=missing
@@ -72,20 +73,14 @@ tasks:
 
   backup:
     cmds:
-      - echo $VAULT_CACERT
-      - vault operator raft snapshot save backup-`date +"%Y%m%d-%H%M"`.snap
+      - mkdir -p backups
+      - vault operator raft snapshot save ./backups/backup-`date +"%Y%m%d-%H%M"`.snap
 
   down:
     aliases: ["clean"]
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose down -v
-#      - docker volume rm {{.STACK_NAME }}_grafana-data
-#      - docker volume rm {{.STACK_NAME }}_loki-data
-#      - docker volume rm {{.STACK_NAME }}_prometheus-data
-#      - docker volume rm {{.STACK_NAME }}_promtail-data
-#      - docker volume rm {{.STACK_NAME }}_vault-data
-#      - docker volume rm {{.STACK_NAME }}_vault-logs
     ignore_error: true
     vars:
       STACK_NAME:
@@ -136,8 +131,25 @@ tasks:
 
   ui:
     cmds:
-      - open https://localhost:8200
+      - open http://localhost:8200
       - ./scripts/00_vault_vars.sh
+      - |  
+        echo "Alloy: http://localhost:12345"        
+        echo "Grafana: http://localhost:3000"
+        echo "Prometheus: http://localhost:9090"
+        echo "Vault: http://localhost:8200"
+
+  token:
+    cmds:
+      - |
+        # copy vault token to clipboard on macos if available
+        if [ "$(uname)" = "Darwin" ] && [ -n "$VAULT_TOKEN" ]; then
+          echo "$VAULT_TOKEN" | pbcopy
+          echo "Vault token copied to clipboard"
+        elif [ "$(uname)" = "Darwin" ] && [ -z "$VAULT_TOKEN" ]; then
+          echo "note: VAULT_TOKEN not set (run 'task vault:init' first)"
+        fi
+    silent: true
 
   pull:
     cmds:

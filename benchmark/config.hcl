@@ -23,7 +23,7 @@ cleanup = true
 #}
 
 test "approle_auth" "approle_logins_1" {
-  weight = 25
+  weight = 20
   config {
     role {
       role_name = "benchmark-role-1"
@@ -33,7 +33,7 @@ test "approle_auth" "approle_logins_1" {
 }
 
 test "approle_auth" "approle_logins_2" {
-  weight = 25
+  weight = 20
   config {
     role {
       role_name = "benchmark-role-3"
@@ -43,7 +43,7 @@ test "approle_auth" "approle_logins_2" {
 }
 
 test "userpass_auth" "userpass_test1" {
-    weight = 25
+    weight = 20
     config {
         username = "test-user"
         password = "password"
@@ -52,7 +52,7 @@ test "userpass_auth" "userpass_test1" {
 }
 
 test "userpass_auth" "userpass_test2" {
-    weight = 25
+    weight = 20
     config {
         username = "test-user2"
         password = "password"
@@ -60,21 +60,21 @@ test "userpass_auth" "userpass_test2" {
     }
 }
 
-#test "kvv2_write" "static_secret_writes" {
-#  weight = 25
+# test "kvv2_write" "static_secret_writes" {
+#  weight = 20
 #  config {
 #    numkvs = 100
 #    kvsize = 100
 #  }
-#}
+# }
 
-#test "kvv2_read" "static_secret_reads" {
-#  weight = 50
-#  config {
-#    numkvs = 100
-##    kvsize = 100
-#  }
-#}
+test "kvv2_read" "static_secret_reads" {
+ weight = 20
+ config {
+   numkvs = 100
+#    kvsize = 100
+ }
+}
 
 #test "ssh_sign" "ssh_sign_test1" {
 #  weight = 25
@@ -91,3 +91,56 @@ test "userpass_auth" "userpass_test2" {
 #test "seal_status" "seal_status_test_1" {
 #    weight = 25
 #}
+#
+# test "pki_issue" "pki_issue_test1" {
+#   weight = 50
+#   config {
+#       setup_delay="2s"
+#       root_ca {
+#         common_name = "benchmark.test"
+#       }
+#       intermediate_csr {
+#         common_name = "benchmark.test Intermediate Authority"
+#       }
+#       role {
+#         ttl = "1h"
+#         key_type = "ed25519"
+#       }
+#   }
+# }
+#
+# test "pki_issue" "pki_issue_test2" {
+#   weight = 100
+#   config {
+#       setup_delay="2s"
+#       root_ca {
+#         common_name = "benchmark.test2"
+#       }
+#       intermediate_csr {
+#         common_name = "benchmark.test2 Intermediate Authority"
+#       }
+#       role {
+#         ttl = "1h"
+#         key_type = "rsa"
+#         key_bits = 2048
+#       }
+#   }
+# }
+
+# test "pki_issue" "pki_issue_test3" {
+#   weight = 100
+#   config {
+#       setup_delay="2s"
+#       root_ca {
+#         common_name = "benchmark.test3"
+#       }
+#       intermediate_csr {
+#         common_name = "benchmark.test3 Intermediate Authority"
+#       }
+#       role {
+#         ttl = "1h"
+#         key_type = "rsa"
+#         key_bits = 4096
+#       }
+#   }
+# }

@@ -2,6 +2,10 @@
 
 A Docker Compose stack for learning HashiCorp Vault Enterprise features with integrated monitoring and hands-on lab exercises.
 
+> **LOCAL DEVELOPMENT AND TRAINING ONLY**
+>
+> This environment is designed exclusively for local development, learning, and training purposes. The stack includes intentional simplifications (TLS disabled by default, exposed ports, development-grade security settings) that are inappropriate for production use.
+
 ## Architecture & Components
 
 This environment provides:
@@ -18,7 +22,7 @@ This environment provides:
 Located in `/labs/` with specific Vault feature demonstrations:
 - **ACL Templating** - AppRole & Userpass authentication with dynamic policies
 - **AWS Authentication** - IAM role-based authentication
-- **Certificate Authentication** - TLS client certificate authentication  
+- **Certificate Authentication** - TLS client certificate authentication
 - **Cross-Namespace Secrets** - Secret sharing across namespaces
 - **Entra ID Integration** - Azure AD authentication and identity management
 - **Namespace Management** - Multi-tenant isolation and access control
@@ -30,6 +34,10 @@ Located in `/labs/` with specific Vault feature demonstrations:
 ```bash
 # Install task runner and jq
 brew install go-task jq
+
+# Install Vault CLI
+brew tap hashicorp/tap
+brew install hashicorp/tap/vault
 
 # Ensure you have Docker and Docker Compose
 docker --version
@@ -43,7 +51,9 @@ cd docker-vault-stack
 ```
 
 **Environment Configuration:**
-Copy `.env.example` to `.env` file in the root directory and add your Vault Enterprise license key.
+Copy `.env.example` to `.env` and configure:
+1. Add your Vault Enterprise license to `VAULT_LICENSE`
+2. `VAULT_ADDR` is pre-configured as `http://localhost:8200`
 
 > **License Options:**
 > - Request enterprise trial: https://www.hashicorp.com/products/vault/trial
@@ -53,17 +63,17 @@ Copy `.env.example` to `.env` file in the root directory and add your Vault Ente
 
 ### Initial Setup
 ```bash
-# 1. Create PKI certificates (if not done)
-task setup-pki
-
-# 2. Start the complete stack
+# 1. Start the complete stack
 task up
 
-# 3. Initialize Vault (first time only)
+# 2. Initialize Vault (first time only)
 task init
 
-# 4. Unseal Vault
+# 3. Unseal Vault
 task unseal
+
+# 4. Config Vault
+task config
 
 # 5. Load environment variables
 source .env
@@ -74,9 +84,9 @@ vault token lookup
 ```
 
 ### Accessing Services
-- **Vault UI**: https://localhost:8200
+- **Vault UI**: http://localhost:8200
 - **Alloy**: http://localhost:12345
-- **Grafana**: http://localhost:3000  
+- **Grafana**: http://localhost:3000
 - **Prometheus**: http://localhost:9090
 - **Loki**: http://localhost:3100
 
@@ -85,19 +95,19 @@ After initial setup, restart with:
 ```bash
 task up unseal
 source .env
+vault token lookup
 ```
 
-## TLS Configuration
+## Environment Variables
 
-### Generate TLS Certificates
-```bash
-# Create new TLS certificates with 1-year validity
-task setup-pki
-```
+The `.env` file is the authoritative source for environment configuration. All scripts and Taskfile tasks source values from this file.
 
-This generates:
-- `volumes/vault/localhost.key` - Private key
-- `volumes/vault/localhost.crt` - Certificate with CN=localhost, SAN=localhost,127.0.0.1
+**Required Variables:**
+- `VAULT_ADDR` - Vault server address (default: `http://localhost:8200`)
+- `VAULT_TOKEN` - Root token (auto-populated by `task init` do not edit manually)
+- `VAULT_LICENSE` - Vault Enterprise license key
+
+**Note:** Scripts will fail with clear error messages if `.env` is missing or `VAULT_ADDR` is not set.
 
 ## Available Tasks
 
@@ -109,7 +119,7 @@ The `Taskfile.yml` provides the following automation commands:
 - `task down` - Stop all services
 - `task stop` - Stop services (alias for down)
 - `task restart` - Restart Vault service
-- `task rm` / `task clean` - Remove containers and volumes completely
+- `task clean` - Remove containers and volumes completely
 
 ### Vault Operations  
 - `task init` - Initialize Vault (first time setup)
@@ -128,62 +138,17 @@ The `Taskfile.yml` provides the following automation commands:
 - `task dev` - Start Vault in development mode
 - `task ui` - Open Vault UI in browser
 - `task config` - Run Vault configuration scripts
-
-### TLS & Security
-- `task create-cert` - Generate new TLS certificates for localhost
-
-### Infrastructure
-- `task pull` - Pull latest Docker images
+- `task token` - Copy Vault token to clipboard (macOS only)
 
 ## Performance Testing
 
 Run benchmarks to test Vault performance and generate metrics:
 ```bash
-# Create benchmark namespace
-vault namespace create vault-benchmark
-
 # Execute performance tests (requires vault-benchmark CLI)
 task benchmark
 ```
 
 ## Troubleshooting
-
-### Common Issues
-
-**Vault Sealed After Restart:**
-```bash
-task unseal
-```
-
-**Permission Denied Errors:**
-```bash
-# Verify token
-vault token lookup
-
-# Check policies
-vault token capabilities <path>
-```
-
-**Container Issues:**
-```bash
-# Check service status
-docker compose ps
-
-# View service logs  
-task logs-vault
-task logs
-```
-
-**Environment Issues:**
-```bash
-# Reload environment
-source .env
-
-# Verify variables
-echo $VAULT_ADDR
-echo $VAULT_TOKEN
-```
-
 ### Clean Reset
 ```bash
 # Complete cleanup and restart
@@ -191,6 +156,7 @@ task clean
 task up
 task init
 task unseal
+task config
 source .env
 ```
 
@@ -220,7 +186,6 @@ source .env
 ## Security Considerations
 
 - **Development Use Only**: This stack exposes services on localhost - not for production
+- **TLS Disabled**: TLS is disabled by default for easier development. Enable TLS for production-like environments
 - **License Compliance**: Ensure Vault Enterprise license compliance
 - **Secrets Management**: Never commit `.env` or `vault-init.json` files
-- **TLS Configuration**: Use `task setup-pki` for proper TLS setup
-- **Access Control**: Follow principle of least privilege in lab policies

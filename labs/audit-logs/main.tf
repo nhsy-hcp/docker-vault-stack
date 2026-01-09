@@ -8,6 +8,9 @@ resource "vault_audit" "vault-benchmark" {
   # namespace = "vault-benchmark"
 }
 
+
+# https://developer.hashicorp.com/vault/docs/enterprise/audit/filtering
+
 resource "vault_audit" "vault-benchmark_filter" {
   type = "file"
   path = "vault_benchmark_filter"

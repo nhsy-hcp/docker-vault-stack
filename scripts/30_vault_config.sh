@@ -24,29 +24,28 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-
-print_status "Configuring Vault for Prometheus metrics collection..."
-
-# Create prometheus metrics policy
-print_status "Creating prometheus-metrics policy..."
-vault policy write prometheus-metrics - << EOF
-path "sys/metrics" {
-  capabilities = ["read"]
-}
-
-path "sys/internal/counters/activity" {
-  capabilities = ["read"]
-}
-EOF
-
-# Generate token for Prometheus and save to file
-print_status "Generating token for Prometheus..."
-TOKEN_FILE="./volumes/prometheus/prometheus-token"
-
-# Ensure the directory exists
-mkdir -p "$(dirname "$TOKEN_FILE")"
-
 # Removed prometheus-metrics token to simplify
+#print_status "Configuring Vault for Prometheus metrics collection..."
+#
+## Create prometheus metrics policy
+#print_status "Creating prometheus-metrics policy..."
+#vault policy write prometheus-metrics - << EOF
+#path "sys/metrics" {
+#  capabilities = ["read"]
+#}
+#
+#path "sys/internal/counters/activity" {
+#  capabilities = ["read"]
+#}
+#EOF
+#
+## Generate token for Prometheus and save to file
+#print_status "Generating token for Prometheus..."
+#TOKEN_FILE="./volumes/prometheus/prometheus-token"
+#
+## Ensure the directory exists
+#mkdir -p "$(dirname "$TOKEN_FILE")"
+
 ## Create token with prometheus-metrics policy
 #vault token create \
 #  -display-name="Prometheus Metrics Token" \

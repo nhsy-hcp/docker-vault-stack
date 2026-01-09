@@ -46,11 +46,11 @@ prometheus.scrape "vault" {
   params = {
     format = ["prometheus"],
   }
-  scheme = "https"
-  //bearer_token_file = "/etc/prometheus/prometheus-token"
-  tls_config {
-    ca_file = "/etc/ssl/certs/vault-ca.crt"
-  }
+  scheme = "http"
+//  bearer_token_file = "/etc/prometheus/prometheus-token"
+//  tls_config {
+//    ca_file = "/etc/ssl/certs/vault-ca.crt"
+//  }
 //  forward_to = [prometheus.remote_write.default.receiver]
   forward_to = [prometheus.relabel.vault.receiver]
 }

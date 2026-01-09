@@ -2,7 +2,14 @@
 
 set -o pipefail
 
-export VAULT_ADDR=https://127.0.0.1:8200
+# Verify VAULT_ADDR is set (should be loaded by Taskfile from .env)
+if [ -z "$VAULT_ADDR" ]; then
+    echo "Error: VAULT_ADDR not set"
+    echo "Please ensure .env file exists with: export VAULT_ADDR=http://localhost:8200"
+    echo "Run: source .env"
+    exit 1
+fi
+
 export VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')
 echo
 echo export VAULT_ADDR=$VAULT_ADDR
