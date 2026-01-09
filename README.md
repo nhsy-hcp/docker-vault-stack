@@ -2,10 +2,6 @@
 
 A Docker Compose stack for learning HashiCorp Vault Enterprise features with integrated monitoring and hands-on lab exercises.
 
-> **LOCAL DEVELOPMENT AND TRAINING ONLY**
->
-> This environment is designed exclusively for local development, learning, and training purposes. The stack includes intentional simplifications (TLS disabled by default, exposed ports, development-grade security settings) that are inappropriate for production use.
-
 ## Architecture & Components
 
 This environment provides:
@@ -186,6 +182,13 @@ source .env
 ## Security Considerations
 
 - **Development Use Only**: This stack exposes services on localhost - not for production
-- **TLS Disabled**: TLS is disabled by default for easier development. Enable TLS for production-like environments
+- **TLS Disabled**: TLS is disabled by default for easier deployment
 - **License Compliance**: Ensure Vault Enterprise license compliance
 - **Secrets Management**: Never commit `.env` or `vault-init.json` files
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+*Note: This project is intended for training and development environments.*
