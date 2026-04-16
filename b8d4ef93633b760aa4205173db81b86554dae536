@@ -1,1 +1,13 @@
 {"id":"76cdeb9f-a71a-4df2-afa7-ac12367c95a4","ts":"2026-04-16T13:55:28.241Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/scripts/20_vault_unseal.sh","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+
+{"id":"cd944a3e-7094-4b30-88dc-bb2212bf72c0","ts":"2026-04-16T13:40:40.679Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/Taskfile.yml","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"8c212c76-25c8-4d56-bc32-25ad80de6434","ts":"2026-04-16T13:40:45.842Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/docker-compose.yml","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"52b9e729-a6c0-45bb-a105-062bb73ec827","ts":"2026-04-16T13:40:50.325Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/docker-compose.yml","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"c9259c78-8ecc-4f83-8827-184bf31f0853","ts":"2026-04-16T13:40:55.437Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/docker-compose.yml","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"c3b80ef8-b310-4ab3-b2a4-817428a0148e","ts":"2026-04-16T13:41:42.369Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/AGENTS.md","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"12f87c78-4ec8-4eda-8075-2233f548c2b5","ts":"2026-04-16T13:41:49.794Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/AGENTS.md","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"e8233040-1edd-441a-8a2b-0770b154066a","ts":"2026-04-16T13:41:56.274Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/AGENTS.md","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"181d2401-2e8e-4ff9-8b67-8a4967c0e262","ts":"2026-04-16T13:42:02.721Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/README.md","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"43aa0716-b072-4c2f-a63c-bd01bf6915ce","ts":"2026-04-16T13:47:15.817Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/Taskfile.yml","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"2ad86c44-d795-46a2-95e2-54cec0818e8d","ts":"2026-04-16T13:47:54.192Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/Taskfile.yml","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
+{"id":"268406b9-a7fd-44d0-89ad-971907f44d88","ts":"2026-04-16T13:48:01.533Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/AGENTS.md","version":"1.0.0","taskID":"23314cf5-2455-430f-a24f-b90571c0c3c9"}
