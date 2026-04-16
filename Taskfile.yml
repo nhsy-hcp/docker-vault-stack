@@ -12,8 +12,6 @@ includes:
     taskfile: ./labs/authentik/Taskfile.yml
     dir: ./labs/authentik
 
-
-
 tasks:
   default:
     cmds:
@@ -33,9 +31,9 @@ tasks:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
-#      - test -f ./volumes/vault/ca.crt
-#      - test -f ./volumes/vault/localhost.crt
-#      - test -f ./volumes/vault/localhost.key
+      # - test -f ./volumes/vault/ca.crt
+      # - test -f ./volumes/vault/localhost.crt
+      # - test -f ./volumes/vault/localhost.key
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up -d --pull=missing
@@ -50,9 +48,9 @@ tasks:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
-#      - test -f ./volumes/vault/ca.crt
-#      - test -f ./volumes/vault/localhost.crt
-#      - test -f ./volumes/vault/localhost.key
+      # - test -f ./volumes/vault/ca.crt
+      # - test -f ./volumes/vault/localhost.crt
+      # - test -f ./volumes/vault/localhost.key
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up vault -d --pull=missing
@@ -102,7 +100,7 @@ tasks:
     cmds:
       - |
         curl -sk --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics?format=prometheus"
-      
+
   logs-vault:
     cmds:
       - |
@@ -140,7 +138,7 @@ tasks:
     cmds:
       - open http://localhost:8200
       - ./scripts/00_vault_vars.sh
-      - |  
+      - |
         echo "Alloy: http://localhost:12345"
         echo "Authentik: http://localhost:9000"
         echo "Grafana: http://localhost:3000"
@@ -184,7 +182,7 @@ tasks:
         ./scripts/30_vault_config.sh
         {{ .CONTAINER_RUNTIME }} compose restart alloy
         {{ .CONTAINER_RUNTIME }} compose restart prometheus
-        
+
 
   shell:
     cmds:
@@ -285,4 +283,4 @@ tasks:
         done
 
   license:
-    cmd:  vault read -format=json /sys/license/status | jq '.data'
+    cmd: vault read -format=json /sys/license/status | jq '.data'

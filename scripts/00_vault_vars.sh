@@ -10,7 +10,8 @@ if [ -z "$VAULT_ADDR" ]; then
     exit 1
 fi
 
-export VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')
+VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')
+export VAULT_TOKEN
 echo
 echo export VAULT_ADDR=$VAULT_ADDR
 echo export VAULT_TOKEN=$VAULT_TOKEN

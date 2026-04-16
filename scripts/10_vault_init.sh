@@ -40,9 +40,9 @@ vault status
 
 if [ -f "vault-init.json" ]; then
     echo "vault-init.json already exists. This means Vault has already been initialized."
-    
+
     # Check for --yes flag in arguments
-    if [[ "$@" == *"--yes"* ]] || [[ "$1" == "--yes" ]]; then
+    if [[ "$*" == *"--yes"* ]] || [[ "$1" == "--yes" ]]; then
         echo "Proceeding with reinitialization (--yes flag provided)..."
     else
         read -p "Do you want to continue and reinitialize Vault? This will overwrite existing keys (y/N): " -n 1 -r
@@ -64,4 +64,3 @@ sleep 20
 #vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[1]')
 #vault operator unseal $(cat vault-init.json | jq -r '.unseal_keys_b64[2]')
 #vault status
-

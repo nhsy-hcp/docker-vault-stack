@@ -45,8 +45,6 @@ tasks:
       - echo "Authentik redeployed successfully"
       - echo "Access Authentik at http://localhost:9000"
 
-
-
   restart:
     desc: Restart Authentik stack
     cmds:
