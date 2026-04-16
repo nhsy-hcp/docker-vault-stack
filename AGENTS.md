@@ -9,15 +9,14 @@ This is a HashiCorp Vault training environment that provides a complete Docker C
 ## Architecture
 
 ### Stack Components
-- **Vault Enterprise**: Main service with Raft storage backend, audit logging enabled, TLS configured with custom CA
+- **Vault Enterprise**: Main service with Raft storage backend and audit logging enabled
 - **Monitoring Stack**: Grafana (dashboards), Prometheus (metrics), Loki (log aggregation), Alloy (metrics collection)
 - **Training Labs**: Located in `/labs/` with specific Vault feature demonstrations
 
 ### Key Configuration Files
 - `docker-compose.yml`: Complete stack definition with Vault Enterprise and monitoring
-- `volumes/vault/raft.hcl`: Vault server configuration with Raft backend and TLS
-- `volumes/alloy/config.alloy`: Alloy configuration for metrics collection with TLS verification
-- `volumes/vault/ca.crt`: Custom CA certificate for TLS verification
+- `volumes/vault/raft.hcl`: Vault server configuration with Raft backend (HTTP mode)
+- `volumes/alloy/config.alloy`: Alloy configuration for metrics collection
 - `.env`: Environment variables for VAULT_ADDR, VAULT_LICENSE, VAULT_TOKEN
 - `Taskfile.yml`: Task runner with all operational commands
 
@@ -57,10 +56,7 @@ task --list
 ```
 
 **Key Tasks:**
-- `create-ca` - Generate root Certificate Authority (CA)
-- `create-cert` - Generate Vault server certificate signed by CA
-- `setup-pki` - Setup complete PKI infrastructure
-- `verify-pki` - Verify PKI certificate chain
+- `lint` - Run pre-commit hooks on all files
 - `tokens` - List all token accessors with details
 - `authentik:all` - Complete Authentik OIDC setup workflow
 - `authentik:redeploy` - Stop, remove volumes, and restart Authentik
@@ -162,7 +158,7 @@ When working with Vault labs, follow these patterns:
        bu01 = { namespace = "bu01", team = "team1" }
        # ... more units
      }
-     
+
      shared_config = {
        # Common settings
      }
@@ -222,8 +218,8 @@ vault kv get -namespace=bu01 team1/app1
 - The `.env` file contains sensitive tokens - never commit this
 - Default setup uses Vault Enterprise - ensure license compliance
 - All services expose ports locally - not for production use
-- TLS is configured with custom CA certificate for secure communication
-- Alloy uses proper TLS verification instead of skipping certificate validation
+- TLS is disabled by default for easier deployment
+- This is a training environment - production deployments should use TLS
 
 ### State Management
 - Terraform state files are created in lab directories

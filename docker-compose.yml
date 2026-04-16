@@ -17,12 +17,6 @@ services:
     configs:
       - source: vault-config
         target: /vault/config/raft.hcl
-      - source: vault-ca
-        target: /vault/config/ca.crt
-      - source: vault-cert
-        target: /vault/config/localhost.crt
-      - source: vault-key
-        target: /vault/config/localhost.key
     volumes:
       - vault-data:/vault/file  # Need this volume to fudge permissions error
       - vault-logs:/vault/logs
@@ -104,8 +98,6 @@ services:
     configs:
       - source: alloy-config
         target: /etc/alloy/config.alloy
-      - source: vault-ca
-        target: /etc/ssl/certs/vault-ca.crt
     volumes:
       - alloy-data:/var/lib/alloy/data
       - vault-logs:/mnt/vault-logs:ro
@@ -194,12 +186,6 @@ services:
 configs:
   vault-config:
     file: ./volumes/vault/raft.hcl
-  vault-ca:
-    file: ./volumes/vault/ca.crt
-  vault-cert:
-    file: ./volumes/vault/localhost.crt
-  vault-key:
-    file: ./volumes/vault/localhost.key
   grafana-datasources:
     file: ./volumes/grafana/datasources.yml
   grafana-dashboards-config:

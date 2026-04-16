@@ -8,8 +8,6 @@ if [ -z "$VAULT_ADDR" ]; then
     exit 1
 fi
 
-export VAULT_CACERT=${PWD}/volumes/vault/ca.crt
-
 vault status
 sleep 3
 echo "Unsealing vault..."

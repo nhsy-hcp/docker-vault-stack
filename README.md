@@ -10,7 +10,7 @@ This environment provides:
 - **Vault Enterprise** - Main service with Raft storage backend and audit logging
 - **Monitoring Stack** - Complete observability suite:
   - **Grafana** - Dashboards and visualization
-  - **Prometheus** - Metrics collection and alerting  
+  - **Prometheus** - Metrics collection and alerting
   - **Loki** - Log aggregation
   - **Alloy** - Metrics collection
 
@@ -111,13 +111,13 @@ The `Taskfile.yml` provides the following automation commands:
 
 ### Stack Management
 - `task up` - Start complete Docker Compose stack
-- `task vault-up` - Start only Vault service  
+- `task vault-up` - Start only Vault service
 - `task down` - Stop all services
 - `task stop` - Stop services (alias for down)
 - `task restart` - Restart Vault service
 - `task clean` - Remove containers and volumes completely
 
-### Vault Operations  
+### Vault Operations
 - `task init` - Initialize Vault (first time setup)
 - `task unseal` - Unseal Vault after restart
 - `task status` - Check Vault status
@@ -161,7 +161,7 @@ source .env
 ### File Structure
 ```
 ├── docker-compose.yml          # Complete stack definition
-├── Taskfile.yml               # Automation commands  
+├── Taskfile.yml               # Automation commands
 ├── volumes/                   # Persistent data
 │   ├── vault/                # Vault configuration & data
 │   ├── alloy/                # Metrics / logs collection
@@ -182,7 +182,7 @@ source .env
 ## Security Considerations
 
 - **Development Use Only**: This stack exposes services on localhost - not for production
-- **TLS Disabled**: TLS is disabled by default for easier deployment
+- **HTTP Only**: TLS is disabled for easier deployment - production deployments should use TLS
 - **License Compliance**: Ensure Vault Enterprise license compliance
 - **Secrets Management**: Never commit `.env` or `vault-init.json` files
 
