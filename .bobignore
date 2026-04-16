@@ -1,0 +1,6 @@
+# Bob Shell ignore patterns
+# Terraform state and cache directories
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup

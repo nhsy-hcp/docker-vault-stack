@@ -7,6 +7,13 @@ dotenv:
 vars:
   CONTAINER_RUNTIME: docker
 
+includes:
+  authentik:
+    taskfile: ./labs/authentik/Taskfile.yml
+    dir: ./labs/authentik
+
+
+
 tasks:
   default:
     cmds:
@@ -64,7 +71,7 @@ tasks:
 
   init:
     cmds:
-      - ./scripts/10_vault_init.sh
+      - ./scripts/10_vault_init.sh {{.CLI_ARGS}}
 
   unseal:
     cmds:
@@ -134,10 +141,13 @@ tasks:
       - open http://localhost:8200
       - ./scripts/00_vault_vars.sh
       - |  
-        echo "Alloy: http://localhost:12345"        
+        echo "Alloy: http://localhost:12345"
+        echo "Authentik: http://localhost:9000"
         echo "Grafana: http://localhost:3000"
         echo "Prometheus: http://localhost:9090"
         echo "Vault: http://localhost:8200"
+
+        echo "Authentik End Session: http://authentik-server:9000/application/o/vault/end-session/"
 
   token:
     cmds:

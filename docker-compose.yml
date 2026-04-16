@@ -1,17 +1,19 @@
 services:
   vault:
-    image: hashicorp/vault-enterprise:${VAULT_VERSION:-1.20-ent}
+    image: hashicorp/vault-enterprise:${VAULT_VERSION:-2.0-ent}
     container_name: ${COMPOSE_PROJECT_NAME}_vault
     restart: unless-stopped
     ports:
       - "${VAULT_PORT:-8200}:8200"
-    env_file:
-      - .env # Contains VAULT_ADDR, VAULT_LICENSE
     environment:
-      VAULT_LOG_LEVEL: ${VAULT_LOG_LEVEL:-info} # Default to 'info', allow override via .env
-      VAULT_CACERT: /vault/config/ca.crt # CA certificate for Vault CLI
+      VAULT_ADDR: ${VAULT_ADDR:-http://localhost:8200}
+      VAULT_LICENSE: ${VAULT_LICENSE:-}
+      VAULT_LOG_LEVEL: ${VAULT_LOG_LEVEL:-info}
+      VAULT_SKIP_VERIFY: ${VAULT_SKIP_VERIFY:-true}
+      VAULT_TOKEN: ${VAULT_TOKEN:-}
     cap_add:
       - IPC_LOCK
+      - SETFCAP
     configs:
       - source: vault-config
         target: /vault/config/raft.hcl
@@ -122,6 +124,73 @@ services:
     depends_on:
       - loki
 
+  authentik-postgres:
+    image: docker.io/library/postgres:16-alpine
+    container_name: authentik-postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - authentik-postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASS}
+      POSTGRES_USER: ${PG_USER:-authentik}
+      POSTGRES_DB: ${PG_DB:-authentik}
+
+  authentik-server:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
+    container_name: authentik-server
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY must be set in .env file}
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:-admin}
+      AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN:-}
+      AUTHENTIK_LISTEN__HTTP: "0.0.0.0:9000"
+      AUTHENTIK_LISTEN__HTTPS: "0.0.0.0:9443"
+      AUTHENTIK_LISTEN__TRUSTED_PROXY_IP: "0.0.0.0/0"
+    volumes:
+      - authentik-media:/media
+      - authentik-templates:/templates
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+    shm_size: 512mb
+
+  authentik-worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
+    container_name: authentik-worker
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY must be set in .env file}
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - authentik-media:/media
+      - authentik-templates:/templates
+    depends_on:
+      - authentik-postgres
+      - authentik-server
+    user: root
+    shm_size: 512mb
+
 configs:
   vault-config:
     file: ./volumes/vault/raft.hcl
@@ -156,3 +225,6 @@ volumes:
   alloy-data:
   vault-data:
   vault-logs:
+  authentik-postgres:
+  authentik-media:
+  authentik-templates:

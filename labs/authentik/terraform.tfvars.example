@@ -1,0 +1,35 @@
+authentik_groups = {
+  "vault-admin" = {
+    description = "Vault admins group"
+  }
+  "vault-user" = {
+    description = "General Vault users group"
+  }
+  "vault-tn001-team1-reader" = {
+    description = "Vault tn001 team1 readers group"
+  }
+  "vault-tn001-team2-reader" = {
+    description = "Vault tn001 team2 readers group"
+  }
+}
+
+authentik_users = {
+  "vaultadmin" = {
+    display_name = "Vault Admin"
+    email        = "vaultadmin@example.com"
+    password     = "LongPassword12345!"
+    groups       = ["vault-admin"]
+  }
+  "testuser1" = {
+    display_name = "Test User 1"
+    email        = "testuser1@example.com"
+    password     = "LongPassword12345!"
+    groups       = ["vault-user", "vault-tn001-team1-reader"]
+  }
+  "testuser2" = {
+    display_name = "Test User 2"
+    email        = "testuser2@example.com"
+    password     = "LongPassword12345!"
+    groups       = ["vault-user", "vault-tn001-team2-reader"]
+  }
+}

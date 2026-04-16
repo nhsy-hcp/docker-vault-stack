@@ -1,0 +1,117 @@
+---
+version: '3'
+
+vars:
+  COMPOSE_FILE: ../../docker-compose.yml
+
+tasks:
+  all:
+    desc: Complete setup workflow (setup-admin + init + apply)
+    cmds:
+      - ./setup-admin.sh
+      - task: init
+      - task: apply
+
+  logs:
+    desc: View logs from all services
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-postgres authentik-server authentik-worker
+
+  logs-server:
+    desc: View Authentik server logs
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-server
+
+  logs-worker:
+    desc: View Authentik worker logs
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-worker
+
+  logs-postgres:
+    desc: View PostgreSQL logs
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-postgres
+
+  redeploy:
+    desc: Stop Authentik services, remove volumes, and restart
+    prompt: This will delete all Authentik data and restart services. Continue?
+    cmds:
+      - echo "Stopping Authentik services..."
+      - docker compose -f {{.COMPOSE_FILE}} stop authentik-postgres authentik-server authentik-worker
+      - echo "Removing volumes..."
+      - docker compose -f {{.COMPOSE_FILE}} down -v authentik-postgres authentik-server authentik-worker
+      - echo "Starting Authentik services..."
+      - docker compose -f {{.COMPOSE_FILE}} up -d authentik-postgres authentik-server authentik-worker
+      - echo "Authentik redeployed successfully"
+      - echo "Access Authentik at http://localhost:9000"
+
+
+
+  restart:
+    desc: Restart Authentik stack
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} restart authentik-postgres authentik-server authentik-worker
+
+  status:
+    desc: Show status of all services
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} ps authentik-postgres authentik-server authentik-worker
+
+  init:
+    desc: Initialize Terraform
+    dir: .
+    cmds:
+      - terraform init
+
+  plan:
+    desc: Run Terraform plan
+    dir: .
+    cmds:
+      - |
+        source .env
+        terraform plan
+
+  apply:
+    desc: Apply Terraform configuration
+    dir: .
+    cmds:
+      - |
+        source .env
+        terraform apply -auto-approve
+
+  destroy:
+    desc: Destroy Terraform resources
+    dir: .
+    prompt: This will destroy all Terraform-managed resources. Continue?
+    cmds:
+      - terraform destroy -auto-approve
+
+  test-auth:
+    desc: Test OIDC authentication
+    cmds:
+      - ./demo-auth.sh
+
+  check-policies:
+    desc: Check current token policies
+    cmds:
+      - ./check-policies.sh
+
+  bootstrap:
+    desc: Complete setup from scratch (requires Authentik services running via main stack)
+    cmds:
+      - echo "Ensure Authentik services are running - task up"
+      - echo "Waiting for Authentik to be ready..."
+      - sleep 30
+      - echo "Access Authentik at http://localhost:9000"
+      - echo "1. Login with admin credentials"
+      - echo "2. Generate API token - Admin Interface > Tokens > Create"
+      - echo "3. Copy token to .env as AUTHENTIK_TOKEN"
+      - echo "4. Run - task authentik init && task authentik apply"
+
+  health:
+    desc: Check health of all services
+    cmds:
+      - echo "Checking PostgreSQL..."
+      - docker compose -f {{.COMPOSE_FILE}} exec authentik-postgres pg_isready -U authentik
+      - echo "Checking Authentik..."
+      - curl -f http://localhost:9000/-/health/live/ || echo "Authentik not ready"
