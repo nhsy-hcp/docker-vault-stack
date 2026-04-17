@@ -31,7 +31,7 @@ locals {
     bu02 = { namespace = "bu02", team = "team2" }
     bu03 = { namespace = "bu03", team = "team3" }
   }
-  
+
   approle_config = {
     token_ttl      = 300
     token_max_ttl  = 600
@@ -141,7 +141,7 @@ export SECRET_ID=$(terraform output -json app_secret_ids | jq -r '.bu02')
 export VAULT_TOKEN=$(vault write -namespace=bu02 -field=token auth/approle/login \
     role_id="$ROLE_ID" \
     secret_id="$SECRET_ID")
-vault token lookup 
+vault token lookup
 ```
 
 **Fetch secrets:**
@@ -174,7 +174,7 @@ export SECRET_ID=$(terraform output -json app_secret_ids | jq -r '.bu03')
 export VAULT_TOKEN=$(vault write -namespace=bu03 -field=token auth/approle/login \
     role_id="$ROLE_ID" \
     secret_id="$SECRET_ID")
-vault token lookup    
+vault token lookup
 ```
 
 **Fetch secrets:**
@@ -221,7 +221,7 @@ Based on `secrets.sh`, the following secrets are created:
 
 **BU01 Namespace:**
 - `shared/team1/app1-3` - Shared secrets for team1
-- `shared/team2/app1-3` - Shared secrets for team2  
+- `shared/team2/app1-3` - Shared secrets for team2
 - `shared/team3/app1-3` - Shared secrets for team3
 - `team1/app1-3` - Team1-specific secrets
 
@@ -256,7 +256,7 @@ vault policy read -namespace=bu01 approle-templated-policy
 
 The userpass demo creates the following users and group assignments:
 - **alice**: Member of team1-group in bu01 namespace, can access team1 secrets
-- **bob**: Member of team2-group in bu02 namespace, can access team2 secrets  
+- **bob**: Member of team2-group in bu02 namespace, can access team2 secrets
 - **jim**: Member of team3-group in bu03 namespace, can access team3 secrets
 
 ## Userpass Authentication Examples
@@ -373,7 +373,7 @@ terraform output -json userpass_group_ids
 vault read identity/entity/name/alice
 vault read -namespace=bu01 identity/group/name/team1-group
 
-# Check bob's entity and group membership  
+# Check bob's entity and group membership
 vault read identity/entity/name/bob
 vault read -namespace=bu02 identity/group/name/team2-group
 
@@ -419,7 +419,7 @@ path "{{identity.groups.names.team1-group.metadata.id}}/data/*" {
 
 # Dynamic metadata access
 path "{{identity.groups.names.team1-group.metadata.id}}/metadata" {
-  capabilities = ["read", "list"]  
+  capabilities = ["read", "list"]
 }
 
 path "{{identity.groups.names.team1-group.metadata.id}}/metadata/*" {

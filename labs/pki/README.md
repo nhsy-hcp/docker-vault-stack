@@ -2,7 +2,7 @@
 
 This lab demonstrates HashiCorp Vault's PKI (Public Key Infrastructure) secrets engine with multiple intermediate Certificate Authorities (CAs) and certificate management capabilities.
 
-Private TLS keys are stored in terraform state and is **NOT** suitable for production use. 
+Private TLS keys are stored in terraform state and is **NOT** suitable for production use.
 
 
 ## Lab Overview
@@ -25,7 +25,7 @@ Root CA (Self-Signed, 1 year validity)
 
 ## Prerequisites
 
-- Vault 
+- Vault
 - Terraform >= 1.0
 - OpenSSL (for certificate inspection)
 
@@ -54,10 +54,10 @@ Root CA (Self-Signed, 1 year validity)
    ```bash
    # Using default role (uses default issuer - v1)
    task default-cert
-   
+
    # Using v1 issuer explicitly
    task v1-cert
-   
+
    # Using v2 issuer
    task v2-cert
    ```
@@ -205,10 +205,10 @@ vault pki health-check -issuer=<issuer_id> pki
    ```bash
    # Check certificate format
    openssl x509 -in certs/intermediate-v1.pem -text -noout
-   
+
    # Verify certificate chain
    openssl verify -CAfile certs/root-ca.pem certs/intermediate-v1.pem
-   
+
    # Verify leaf certificate
     openssl verify -CAfile <(cat certs/root-ca.pem certs/intermediate-v1.pem) <(vault write -field=certificate pki/issue/v1 common_name="test.example.com" ttl=1m)
    ```
@@ -217,7 +217,7 @@ vault pki health-check -issuer=<issuer_id> pki
    ```bash
    # Check role configuration
    vault read pki/roles/default
-   
+
    # Test certificate issuance
    vault write -f pki/issue/default common_name=test.example.com
    ```
@@ -226,7 +226,7 @@ vault pki health-check -issuer=<issuer_id> pki
    ```bash
    # Force CRL rotation
    vault write pki/crl/rotate
-   
+
    # Check CRL status
    vault read pki/crl/rotate
    ```
@@ -246,4 +246,3 @@ task health-check
 - [Vault PKI Secrets Engine](https://developer.hashicorp.com/vault/docs/secrets/pki)
 - [Vault PKI Secrets Engine (API)](https://developer.hashicorp.com/vault/api-docs/secret/pki)
 - [PKI Best Practices](https://developer.hashicorp.com/vault/tutorials/secrets-management/pki-engine)
-

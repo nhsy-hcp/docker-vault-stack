@@ -302,4 +302,3 @@ tasks:
       - terraform apply -replace='vault_secrets_sync_association.test_secrets' -auto-approve
       - task: verify-aws
       - task: verify-sync
-

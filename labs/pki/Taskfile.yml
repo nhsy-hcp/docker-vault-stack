@@ -11,7 +11,7 @@ tasks:
   v1-cert:
     cmds:
       - |
-         vault write -f -field=certificate pki/issue/v1 common_name=test.example.com | openssl x509 -text -noout        
+         vault write -f -field=certificate pki/issue/v1 common_name=test.example.com | openssl x509 -text -noout
 
   v2-cert:
     cmds:

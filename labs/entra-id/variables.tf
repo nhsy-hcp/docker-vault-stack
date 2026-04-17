@@ -1,6 +1,6 @@
 variable "vault_oidc_mount_path" {
-  type        = string
-  default     = "oidc"
+  type    = string
+  default = "oidc"
 }
 
 variable "azure_groups" {

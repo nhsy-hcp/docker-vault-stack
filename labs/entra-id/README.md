@@ -39,47 +39,47 @@ docker run -it --rm \
    az ad sp create-for-rbac --name terraform-spn \
      --role Contributor \
      --scopes /subscriptions/$SUBSCRIPTION_ID
-   
+
    # Get the APP_ID from the output above, then grant Azure AD permissions
    export APP_ID="<appId-from-previous-command>"
-   
+
    # Grant Azure AD permissions for managing applications, users, and groups
    # Note: These require admin consent in your organization
-   
+
    # Application management permissions
    az ad app permission add --id $APP_ID \
      --api 00000003-0000-0000-c000-000000000000 \
      --api-permissions 1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9=Role
-   
+
    # User management permissions
    az ad app permission add --id $APP_ID \
      --api 00000003-0000-0000-c000-000000000000 \
      --api-permissions 741f803b-c850-494e-b5df-cde7c675a1ca=Role
-   
+
    # Group management permissions
    az ad app permission add --id $APP_ID \
      --api 00000003-0000-0000-c000-000000000000 \
      --api-permissions 62a82d76-70ea-41e2-9197-370581804d09=Role
-   
+
    # Directory read permissions
    az ad app permission add --id $APP_ID \
      --api 00000003-0000-0000-c000-000000000000 \
      --api-permissions 7ab1d382-f21e-4acd-a863-ba3e13f7da61=Role
-   
+
    # App role assignment permissions
    az ad app permission add --id $APP_ID \
      --api 00000003-0000-0000-c000-000000000000 \
      --api-permissions 06b708a9-e830-4db3-a914-8e69da51d44f=Role
-   
+
    # Grant admin consent (requires Global Administrator role)
    az ad app permission admin-consent --id $APP_ID
-   
+
    # Alternative: Grant consent for the Vault application specifically
    # First get the Vault app ID from Terraform output
    export VAULT_APP_ID=$(terraform output -raw vault_application_id)
    az ad app permission admin-consent --id $VAULT_APP_ID
    ```
-   
+
    **Required Azure AD API Permissions:**
    - `Application.ReadWrite.All` (1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9) - Create and manage Azure AD applications
    - `User.ReadWrite.All` (741f803b-c850-494e-b5df-cde7c675a1ca) - Create and manage users

@@ -202,7 +202,7 @@ groups:
         annotations:
           summary: "High memory usage"
           description: "Memory usage on {{ $labels.instance }} is {{ $value }}%"
-      
+
       # Percentage of physical memory in use over 85% for 2 minutes
       - alert: HighMemoryUsage
         expr: mem_used_percent > 85
@@ -232,7 +232,7 @@ groups:
         annotations:
           summary: "High network traffic"
           description: "Network traffic on {{ $labels.instance }} is {{ $value }}/s"
-      
+
       # Bytes transmitted on each network interface. Greater than 100MB/s over 10 minutes
       - alert: HighNetworkTrafficSent
         expr: rate(net_bytes_sent[5m]) > 100000000  # 100MB/s
@@ -242,7 +242,7 @@ groups:
         annotations:
           summary: "High network traffic"
           description: "Network traffic on {{ $labels.instance }} is {{ $value }}/s"
-      
+
       # Total number of available file handles
       - alert: HighFileDescriptorUsageTotal
         expr: (linux_sysctl_fs_file_nr / linux_sysctl_fs_file_max) * 100 > 80

@@ -40,4 +40,3 @@ azure_users = {
     group_memberships = ["vault-user", "vault-tn001-team2-reader"]
   }
 }
-

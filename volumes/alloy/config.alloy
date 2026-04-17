@@ -29,7 +29,7 @@ prometheus.exporter.unix "default" {
 prometheus.scrape "unix" {
   targets = prometheus.exporter.unix.default.targets
   forward_to = [prometheus.remote_write.default.receiver]
-  
+
   clustering {
     enabled = true
   }
