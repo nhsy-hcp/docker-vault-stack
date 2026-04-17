@@ -2,7 +2,7 @@
 #vault_addr = ""    # set via ENVIRONMENT VARIABLE
 #vault_token = ""   # set via ENVIRONMENT VARIABLE
 vault_namespace="vault-benchmark"
-duration = "15m"
+duration = "5m"
 cleanup = true
 
 #test "pki_issue" "pki_issue_test1" {

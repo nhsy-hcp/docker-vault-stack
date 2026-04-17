@@ -86,11 +86,12 @@ services:
 #      - ./volumes/loki/loki_perm_fix.sh:/loki/loki_perm_fix.sh:ro
     command: -config.file=/etc/loki/loki.yml
 #    entrypoint: /loki/loki_perm_fix.sh
-    user: root # Required for permission fix as Loki runs as user Loki by default
 
   alloy:
     image: grafana/alloy:${ALLOY_VERSION:-latest}
     container_name: ${COMPOSE_PROJECT_NAME}_alloy
+#    deploy:
+#      replicas: 0
     restart: unless-stopped
     environment:
       - VAULT_ADDR=https://vault:8200
@@ -112,7 +113,7 @@ services:
       - --server.http.listen-addr=0.0.0.0:12345
     ports:
       - "12345:12345"
-    user: root
+#    user: root
     depends_on:
       - loki
 
