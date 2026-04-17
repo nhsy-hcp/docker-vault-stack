@@ -195,6 +195,7 @@ task authentik:init              # Initialize Terraform
 task authentik:plan              # Show planned changes
 task authentik:apply             # Apply changes (auto-approve)
 task authentik:destroy           # Destroy resources (with prompt)
+task authentik:purge             # Remove Terraform state and disable Vault OIDC auth (with prompt)
 
 # Testing
 task authentik:test-auth         # Test OIDC authentication
@@ -272,7 +273,7 @@ vault read auth/oidc/config
 
 ### Issue: Terraform asks for authentik_token variable
 
-**Solution**: 
+**Solution**:
 1. Run `./setup-admin.sh` first to generate token
 2. Verify `.env` contains `AUTHENTIK_TOKEN=<token>`
 3. Ensure parent Taskfile has `dotenv: [.env]` declaration
@@ -301,6 +302,25 @@ vault read auth/oidc/config
 2. **Plan changes**: `task authentik:plan`
 3. **Apply changes**: `task authentik:apply`
 4. **Test**: `task authentik:test-auth`
+
+### Cleaning Up Vault OIDC Configuration
+
+If you need to completely remove the Vault OIDC configuration and Terraform state:
+
+```bash
+# Remove Terraform state and disable Vault OIDC auth
+task authentik:purge
+```
+
+This task will:
+1. Remove Terraform state for all OIDC-related resources (identity groups, auth backends, policies)
+2. Disable the Vault OIDC auth backend
+3. Delete the Vault identity group `authentik-vault-admin-external`
+
+**Use cases**:
+- Starting fresh with a new OIDC configuration
+- Resolving state conflicts or drift issues
+- Cleaning up before redeploying Authentik
 
 ### Adding New Users
 

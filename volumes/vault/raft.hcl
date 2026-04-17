@@ -14,13 +14,14 @@ storage "raft" {
 listener "tcp" {
   address     = "0.0.0.0:8200"
   tls_disable = true
-  # unauthenticated_metrics_access = true
+  telemetry {
+    unauthenticated_metrics_access = "true"
+  }
 }
 
 telemetry {
   disable_hostname          = true
   prometheus_retention_time = "24h"
-  unauthenticated_metrics_access = true
 }
 
 reporting {

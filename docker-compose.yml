@@ -147,15 +147,12 @@ services:
       AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:-admin}
       AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN:-}
-      AUTHENTIK_LISTEN__HTTP: "0.0.0.0:9000"
-      AUTHENTIK_LISTEN__HTTPS: "0.0.0.0:9443"
-      AUTHENTIK_LISTEN__TRUSTED_PROXY_IP: "0.0.0.0/0"
     volumes:
       - authentik-media:/media
       - authentik-templates:/templates
     ports:
       - "9000:9000"
-      - "9443:9443"
+#      - "9443:9443"
     depends_on:
       authentik-postgres:
         condition: service_healthy

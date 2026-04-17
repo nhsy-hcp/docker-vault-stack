@@ -44,7 +44,7 @@ echo ""
 # Get entity details
 echo "Entity Details:"
 vault read identity/entity/id/"$ENTITY_ID" -format=json | jq -r '
-    .data | 
+    .data |
     "Name: \(.name)",
     "Aliases: \(.aliases | length)",
     "Direct Policies: \(.policies // [] | join(", "))",

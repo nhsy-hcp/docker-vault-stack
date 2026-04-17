@@ -83,6 +83,7 @@ tasks:
 
   down:
     aliases: ["clean"]
+    prompt: This will stop the stack and permanently remove Docker volumes, including Vault data. Continue?
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose down -v

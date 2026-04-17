@@ -36,9 +36,10 @@ resource "vault_jwt_auth_backend" "root" {
   namespace_in_state = true
 
   tune {
-    default_lease_ttl = "1h"
-    max_lease_ttl     = "8h"
-    token_type        = "default-service"
+    default_lease_ttl  = "1h"
+    max_lease_ttl      = "8h"
+    token_type         = "default-service"
+    listing_visibility = "unauth"
   }
 }
 
@@ -59,7 +60,8 @@ resource "vault_jwt_auth_backend_role" "root" {
   oidc_scopes           = ["openid", "profile", "email", "groups"]
   allowed_redirect_uris = local.vault_redirect_uris
 
-  token_bound_cidrs = ["192.168.0.0/16"]
+  # For security, you can restrict token issuance to specific CIDR blocks if needed
+  # token_bound_cidrs = ["192.168.0.0/16"]
 }
 
 # OIDC Auth Backend - Admin Namespace

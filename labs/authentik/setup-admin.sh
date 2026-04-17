@@ -21,6 +21,25 @@ ADMIN_USER="${AUTHENTIK_ADMIN_USER:-akadmin}"
 NEW_PASSWORD="${AUTHENTIK_ADMIN_PASSWORD:?AUTHENTIK_ADMIN_PASSWORD must be set in .env file}"
 AUTHENTIK_URL="http://localhost:9000"
 
+# Generate AUTHENTIK_SECRET_KEY if not set or is placeholder
+if [ -z "${AUTHENTIK_SECRET_KEY:-}" ] || [ "${AUTHENTIK_SECRET_KEY}" = "CHANGE_ME_GENERATE_RANDOM_KEY" ]; then
+    echo "Generating AUTHENTIK_SECRET_KEY..."
+    AUTHENTIK_SECRET_KEY=$(openssl rand -base64 32)
+    echo "✅ Generated new AUTHENTIK_SECRET_KEY"
+
+    # Update .env file with generated secret key
+    ENV_FILE="../../.env"
+    if [ -f "$ENV_FILE" ]; then
+        if grep -q "^AUTHENTIK_SECRET_KEY=" "$ENV_FILE"; then
+            sed -i '' "s|^AUTHENTIK_SECRET_KEY=.*|AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY}|" "$ENV_FILE"
+        else
+            echo "AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY}" >> "$ENV_FILE"
+        fi
+        echo "✅ Updated .env with AUTHENTIK_SECRET_KEY"
+    fi
+    echo ""
+fi
+
 # Wait for Authentik to be ready (HTTP 200)
 echo "Waiting for Authentik to be ready..."
 MAX_ATTEMPTS=60
@@ -74,7 +93,7 @@ try:
             "type": "internal",
         }
     )
-    
+
     if created:
         print(f"USER_CREATED:{username}")
         # Make user superuser by adding to admins group
@@ -84,15 +103,15 @@ try:
             defaults={"is_superuser": True}
         )
         user.ak_groups.add(admin_group)
-    
+
     # Set password
     user.set_password(password)
     user.save()
     print(f"PASSWORD_SET:{username}")
-    
+
     # Delete existing token if it exists
     Token.objects.filter(identifier="terraform-token").delete()
-    
+
     # Create new API token
     token = Token.objects.create(
         identifier="terraform-token",
@@ -101,9 +120,9 @@ try:
         description="Terraform API Token",
         expiring=False,
     )
-    
+
     print(f"TOKEN:{token.key}")
-    
+
 except Exception as e:
     import traceback
     print(f"ERROR:{str(e)}")
@@ -148,27 +167,26 @@ echo "Step 2: Updating .env file..."
 if [ -f .env ]; then
     # Update or add AUTHENTIK_TOKEN
     if grep -q "^export AUTHENTIK_TOKEN=" .env || grep -q "^AUTHENTIK_TOKEN=" .env; then
-        sed -i.bak "s|^export AUTHENTIK_TOKEN=.*|export AUTHENTIK_TOKEN=${API_TOKEN}|" .env
-        sed -i.bak "s|^AUTHENTIK_TOKEN=.*|export AUTHENTIK_TOKEN=${API_TOKEN}|" .env
+        sed -i '' "s|^export AUTHENTIK_TOKEN=.*|export AUTHENTIK_TOKEN=${API_TOKEN}|" .env
+        sed -i '' "s|^AUTHENTIK_TOKEN=.*|export AUTHENTIK_TOKEN=${API_TOKEN}|" .env
     else
         echo "export AUTHENTIK_TOKEN=${API_TOKEN}" >> .env
     fi
-    
+
     # Update or add AUTHENTIK_ADMIN_PASSWORD
     if grep -q "^AUTHENTIK_ADMIN_PASSWORD=" .env; then
-        sed -i.bak "s|^AUTHENTIK_ADMIN_PASSWORD=.*|AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}|" .env
+        sed -i '' "s|^AUTHENTIK_ADMIN_PASSWORD=.*|AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}|" .env
     else
         echo "AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}" >> .env
     fi
-    
+
     # Update or add AUTHENTIK_ADMIN_USER
     if grep -q "^AUTHENTIK_ADMIN_USER=" .env; then
-        sed -i.bak "s|^AUTHENTIK_ADMIN_USER=.*|AUTHENTIK_ADMIN_USER=${ADMIN_USER}|" .env
+        sed -i '' "s|^AUTHENTIK_ADMIN_USER=.*|AUTHENTIK_ADMIN_USER=${ADMIN_USER}|" .env
     else
         echo "AUTHENTIK_ADMIN_USER=${ADMIN_USER}" >> .env
     fi
-    
-    rm -f .env.bak
+
     echo "✅ Updated .env file"
 else
     echo "export AUTHENTIK_TOKEN=${API_TOKEN}" > .env

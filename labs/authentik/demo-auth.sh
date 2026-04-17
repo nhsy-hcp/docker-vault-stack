@@ -27,11 +27,11 @@ echo ""
 test_auth() {
     local namespace=$1
     local description=$2
-    
+
     echo "=== Testing: $description ==="
     echo "Namespace: ${namespace:-root}"
     echo ""
-    
+
     if [ -z "$namespace" ]; then
         echo "Running: vault login -method=oidc role=default"
         vault login -method=oidc role=default
@@ -39,11 +39,11 @@ test_auth() {
         echo "Running: vault login -namespace=$namespace -method=oidc role=default"
         vault login -namespace="$namespace" -method=oidc role=default
     fi
-    
+
     echo ""
     echo "✅ Authentication successful!"
     echo ""
-    
+
     # Show token info
     echo "Token information:"
     if [ -z "$namespace" ]; then
@@ -51,7 +51,7 @@ test_auth() {
     else
         vault token lookup -namespace="$namespace" | grep -E "(display_name|policies|entity_id)"
     fi
-    
+
     echo ""
     echo "---"
     echo ""
@@ -85,17 +85,17 @@ case $choice in
         echo "First, authenticate to admin namespace..."
         echo ""
         test_auth "admin" "Admin Namespace - User Access"
-        
+
         echo "=== Attempting to read secrets ==="
         echo ""
-        
+
         echo "Reading: vault kv get -namespace=admin/tn001 team1/app1"
         if vault kv get -namespace=admin/tn001 team1/app1; then
             echo "✅ Successfully read app1 secret"
         else
             echo "❌ Failed to read app1 secret"
         fi
-        
+
         echo ""
         echo "Reading: vault kv get -namespace=admin/tn001 team1/app2"
         if vault kv get -namespace=admin/tn001 team1/app2; then

@@ -84,6 +84,28 @@ tasks:
     cmds:
       - terraform destroy -auto-approve
 
+  purge:
+    desc: Remove Terraform state and disable Vault OIDC auth
+    dir: .
+    silent: true
+    prompt: This will remove Terraform state and disable Vault OIDC auth. Continue?
+    cmds:
+      - echo "Removing Terraform state resources..."
+      - terraform state rm vault_identity_group.vault_admin_external || true
+      - terraform state rm vault_identity_group_alias.vault_admin_external || true
+      - terraform state rm vault_jwt_auth_backend.root || true
+      - terraform state rm vault_jwt_auth_backend_role.root || true
+      - terraform state rm vault_policy.admin || true
+      - terraform state rm vault_policy.tn001_team1_reader || true
+      - terraform state rm vault_policy.tn001_team2_reader || true
+      - terraform state rm vault_policy.tn001_ui || true
+      - echo "Disabling Vault OIDC auth..."
+      - |
+        source ../../.env
+        vault auth disable oidc || echo "OIDC auth already disabled or not found"
+        vault delete identity/group/name/authentik-vault-admin-external || echo "Identity group already deleted or not found"
+      - echo "Purge completed"
+
   test-auth:
     desc: Test OIDC authentication
     cmds:

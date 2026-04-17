@@ -43,7 +43,7 @@ data "vault_policy_document" "ui" {
     path         = "sys/internal/ui/namespaces"
     capabilities = ["read"]
   }
-  
+
   # Allow access to counters for UI metrics
   rule {
     path         = "sys/internal/counters/activity"
@@ -53,7 +53,7 @@ data "vault_policy_document" "ui" {
     path         = "sys/internal/counters/config"
     capabilities = ["read"]
   }
-  
+
   # # Allow reading license status
   # rule {
   #   path         = "sys/license/status"
@@ -65,7 +65,7 @@ data "vault_policy_document" "ui" {
   #   path         = "sys/capabilities-self"
   #   capabilities = ["update"]
   # }
-  
+
   # # Namespace-aware paths (with +/ prefix for current namespace)
   # rule {
   #   path         = "+/sys/internal/ui/mounts"
