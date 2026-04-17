@@ -5,66 +5,53 @@ This lab demonstrates how to integrate [Authentik](https://goauthentik.io/) as a
 ## Table of Contents
 
 - [Overview](#overview)
-- [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
-- [Detailed Setup](#detailed-setup)
 - [Testing Authentication](#testing-authentication)
 - [Understanding the Configuration](#understanding-the-configuration)
 - [Troubleshooting](#troubleshooting)
+- [Available Tasks](#available-tasks)
 - [Cleanup](#cleanup)
 
 ## Overview
 
-This lab creates:
-- **Authentik Stack**: OAuth2/OIDC provider with PostgreSQL backend
-- **Vault Namespaces**: Root, admin, and tenant (tn001) namespaces
-- **OIDC Authentication**: Configured in root and admin namespaces
+### What This Lab Creates
+
+- **Authentik Stack**: OAuth2/OIDC provider (v2026.2.2) with PostgreSQL backend
+- **Vault Namespaces**: Root, admin, and tenant (tn001) with OIDC authentication
 - **Identity Groups**: External and internal groups for access control
-- **Sample Secrets**: KV secrets for testing access permissions
+- **Sample Secrets**: KV secrets for testing permissions
 
 ### Key Features
 
-- ✅ No Redis required (simplified deployment)
-- ✅ Multi-namespace authentication
-- ✅ Group-based access control
-- ✅ Custom OIDC scope mappings
-- ✅ Automated setup with Taskfile
-- ✅ Complete Terraform automation
+- No Redis required (simplified deployment)
+- Multi-namespace authentication (root and admin)
+- Automated admin user creation and API token generation
+- Group-based access control with policy templates
+- Complete Terraform automation
+- Network-aware configuration for Docker environments
 
-## Architecture
+### Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Docker Compose Stack                         │
+│                     Docker Compose Stack                        │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ┌──────────────────┐         ┌──────────────────┐             │
-│  │   Authentik      │         │  PostgreSQL      │             │
-│  │   (Server)       │◄────────┤  (Database)      │             │
-│  │   Port: 9000     │         │  Port: 5432      │             │
-│  └──────────────────┘         └──────────────────┘             │
-│           │                                                      │
+│  ┌──────────────────┐         ┌──────────────────┐              │
+│  │   Authentik      │         │  PostgreSQL      │              │
+│  │   Port: 9000     │◄────────┤  Port: 5432      │              │
+│  └──────────────────┘         └──────────────────┘              │
 │           │ OIDC                                                │
-│           ▼                                                      │
-│  ┌──────────────────┐                                          │
-│  │   Vault          │                                          │
-│  │   (External)     │                                          │
-│  │   Port: 8200     │                                          │
-│  └──────────────────┘                                          │
-│                                                                   │
+│           ▼                                                     │
+│  ┌──────────────────┐                                           │
+│  │   Vault          │                                           │
+│  │   Port: 8200     │                                           │
+│  └──────────────────┘                                           │
 └─────────────────────────────────────────────────────────────────┘
-```
 
-### Authentication Flow
+Authentication Flow: User → Vault → Authentik Login → Group Mapping → Token
 
-```
-User → Vault UI/CLI → Authentik Login → Group Mapping → Vault Token
-```
-
-### Namespace Structure
-
-```
+Namespace Structure:
 Root (/)
 ├── OIDC Auth: vault-admin group
 └── Admin (/admin)
@@ -75,184 +62,87 @@ Root (/)
 
 ## Prerequisites
 
-### Required Software
+### Required Environment Variables
 
-- Docker and Docker Compose
-- Terraform CLI (>= 1.0)
-- Vault CLI
-- Task runner: `brew install go-task`
-- jq: `brew install jq`
-
-### Required Services
-
-- Parent Vault stack must be running: `task up` (from project root)
-- Vault must be initialized and unsealed
-- Network `docker-vault-stack` must exist
-
-### Environment Variables
-
-Copy `.env.example` to `.env` and configure:
-
-```bash
-cp .env.example .env
-```
-
-**Note:** Vault environment variables (`VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_SKIP_VERIFY`) are inherited from the parent project's `.env` file. You only need to configure Authentik-specific variables.
-
-Generate required secrets:
-
-```bash
-# Generate Authentik secret key
-openssl rand -base64 32
-
-# Generate bootstrap token
-openssl rand -hex 32
-
-# Generate PostgreSQL password
-openssl rand -base64 24
-```
-
-## Quick Start
-
-### One-Command Setup
-
-From the project root:
-
-```bash
-# 1. Start all services (including Authentik)
-task up
-
-# 2. Run complete Authentik setup
-task authentik:all
-```
-
-This will:
-1. Create admin user and generate API token
-2. Initialize Terraform
-3. Apply the Vault OIDC configuration
-
-### Manual Setup
-
-If you prefer step-by-step setup:
-
-```bash
-# 1. Start all services (including Authentik)
-task up
-
-# 2. Wait for Authentik to be ready
-# The setup script will wait automatically
-
-# 3. Run setup script to create admin and generate token
-cd labs/authentik
-./setup-admin.sh
-
-# 4. Initialize Terraform
-task authentik:init
-
-# 5. Apply Terraform configuration
-task authentik:apply
-```
-
-## Detailed Setup
-
-### Step 1: Configure Environment
-
-Edit `.env` file with your values:
+Add these to the **project root `.env` file** (not in `labs/authentik/`):
 
 ```bash
 # Authentik Configuration
-AUTHENTIK_SECRET_KEY=<your-generated-key>
-AUTHENTIK_BOOTSTRAP_PASSWORD=admin
-AUTHENTIK_BOOTSTRAP_TOKEN=<your-generated-token>
-AUTHENTIK_POSTGRESQL_PASSWORD=<your-generated-password>
+AUTHENTIK_SECRET_KEY=<generate with: openssl rand -base64 32>
+AUTHENTIK_ADMIN_USER=akadmin
+AUTHENTIK_ADMIN_PASSWORD=<REQUIRED - set your admin password>
 
-# Authentik Provider Configuration (used by Terraform)
+# PostgreSQL Configuration
+PG_PASS=<generate with: openssl rand -base64 24>
+PG_USER=authentik
+PG_DB=authentik
+
+# Authentik Provider (used by Terraform)
 AUTHENTIK_URL=http://localhost:9000
-AUTHENTIK_TOKEN=<from-authentik-ui>
-
-# Docker Compose
-COMPOSE_PROJECT_NAME=docker-vault-stack
+AUTHENTIK_TOKEN=<auto-generated by setup-admin.sh>
 ```
 
-**Note:** Vault configuration (`VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_SKIP_VERIFY`) is inherited from the parent project's `.env` file.
+**Important:**
+- `AUTHENTIK_ADMIN_PASSWORD` **must** be set before running setup
+- `AUTHENTIK_TOKEN` is auto-generated - do not set manually
+- Vault variables (`VAULT_ADDR`, `VAULT_TOKEN`) are already in root `.env`
 
-### Step 2: Start Services
+### Network Configuration (Required)
 
-From project root, start all services (including Authentik):
+Add this entry to `/etc/hosts` for OIDC callbacks to work:
 
 ```bash
-task up
+127.0.0.1       authentik-server
 ```
 
-Verify Authentik services are running:
+**Why required?** OIDC callback URLs need consistent hostname resolution across host and Docker containers.
+
+### Network Architecture
+
+| Context | URL | Reason |
+|---------|-----|--------|
+| **Terraform Provider** | `http://localhost:9000` | Runs on host, uses port forwarding |
+| **Vault OIDC Config** | `http://authentik-server:9000` | Runs in container, uses Docker service name |
+| **Browser Access** | `http://authentik-server:9000` | Uses /etc/hosts for consistent resolution |
+
+## Quick Start
+
+### Automated Setup (Recommended)
 
 ```bash
-task authentik:status
+# From project root
+task up                  # Start all services
+task authentik:all       # Complete setup (admin + terraform)
 ```
 
-Check health:
+This runs:
+1. `setup-admin.sh` - Creates admin user and generates API token
+2. `terraform init` - Initializes Terraform providers
+3. `terraform apply` - Configures Vault OIDC
 
+**Access Points:**
+- Authentik UI: http://localhost:9000 (or http://authentik-server:9000)
+- Login: Username from `AUTHENTIK_ADMIN_USER`, password from `AUTHENTIK_ADMIN_PASSWORD`
+
+**Verify Deployment:**
 ```bash
-task authentik:health
-```
-
-### Step 3: Generate Authentik API Token
-
-1. Access Authentik UI: http://localhost:9000
-2. Login with admin credentials (from `AUTHENTIK_BOOTSTRAP_PASSWORD`)
-3. Navigate to: **Admin Interface** → **Tokens** → **Create Token**
-4. Create a token with:
-   - **User**: akadmin
-   - **Intent**: API
-   - **Expiring**: No (or set expiration as needed)
-5. Copy the token value
-6. Add to `.env` as `AUTHENTIK_TOKEN`
-
-### Step 4: Deploy with Terraform
-
-```bash
-# Initialize Terraform
-task authentik:init
-
-# Review the plan
-task authentik:plan
-
-# Apply the configuration
-task authentik:apply
-```
-
-### Step 5: Verify Deployment
-
-```bash
-# Check Terraform outputs
-terraform output
-
-# Verify OIDC configuration
-curl -k http://localhost:9000/application/o/vault/.well-known/openid-configuration | jq
-
-# Check Vault namespaces
-vault namespace list
-vault namespace list -namespace=admin
+task authentik:status    # Check services
+task authentik:health    # Health checks
+vault namespace list     # Verify namespaces
 ```
 
 ## Testing Authentication
 
 ### Test 1: Root Namespace (Admin Access)
 
-Login as `vaultadmin` (member of `vault-admin` group):
-
 ```bash
-# CLI login
+# Login as vaultadmin (vault-admin group)
 vault login -method=oidc role=default
 
-# Or use the demo script
+# Or use demo script
 ./demo-auth.sh
-```
 
-Verify admin access:
-
-```bash
-# Should have full access
+# Verify admin access
 vault namespace list
 vault policy list
 vault auth list
@@ -260,27 +150,19 @@ vault auth list
 
 ### Test 2: Admin Namespace (User Access)
 
-Login as `testuser1` (member of `vault-user` group):
-
 ```bash
-# CLI login
+# Login as testuser1 (vault-user group)
 vault login -namespace=admin -method=oidc role=default
-```
 
-Verify user access:
-
-```bash
-# Should have limited access
+# Verify limited access
 vault namespace list -namespace=admin
 vault kv list -namespace=admin/tn001 team1
 ```
 
 ### Test 3: Read Secrets (Team Reader)
 
-As `testuser1` (member of `vault-tn001-team1-reader` group):
-
 ```bash
-# Read secrets
+# As testuser1 (vault-tn001-team1-reader group)
 vault kv get -namespace=admin/tn001 team1/app1
 vault kv get -namespace=admin/tn001 team1/app2
 ```
@@ -291,13 +173,11 @@ vault kv get -namespace=admin/tn001 team1/app2
 # Check current token
 vault token lookup
 
-# Get entity ID
-ENTITY_ID=$(vault token lookup -format=json | jq -r '.data.entity_id')
-
 # View entity details
+ENTITY_ID=$(vault token lookup -format=json | jq -r '.data.entity_id')
 vault read identity/entity/id/$ENTITY_ID
 
-# Or use the helper script
+# Or use helper script
 ./check-policies.sh
 ```
 
@@ -305,27 +185,11 @@ vault read identity/entity/id/$ENTITY_ID
 
 ### Authentik Groups
 
-Three groups are created with different access levels:
-
 | Group | Description | Vault Access |
 |-------|-------------|--------------|
 | `vault-admin` | Full administrators | Root namespace, all permissions |
 | `vault-user` | Standard users | Admin namespace, default access |
 | `vault-tn001-team1-reader` | Team readers | Tenant namespace, read-only to team1/* |
-
-### Vault Namespaces
-
-```
-/ (root)
-├── OIDC mount: /oidc
-├── Policy: authentik-admin
-└── admin/
-    ├── OIDC mount: /oidc
-    └── tn001/
-        ├── KV mount: team1/
-        ├── Policy: authentik-tn001-team1-reader
-        └── Secrets: app1, app2
-```
 
 ### Identity Groups
 
@@ -338,41 +202,43 @@ Three groups are created with different access levels:
 
 ### OIDC Configuration
 
-**Scopes**: `openid`, `profile`, `email`, `groups`
-
-**Claims**:
-- `user_claim`: `email` (user identifier)
-- `groups_claim`: `groups` (group membership)
-
-**Redirect URIs**:
-- `http://localhost:8250/oidc/callback` (CLI)
-- `https://127.0.0.1:8200/ui/vault/auth/oidc/oidc/callback` (UI)
-- `https://localhost:8200/ui/vault/auth/oidc/oidc/callback` (UI alternate)
+- **Scopes**: `openid`, `profile`, `email`, `groups`
+- **Claims**: `email` (user identifier), `groups` (group membership)
+- **Redirect URIs**: CLI (`http://localhost:8250/oidc/callback`), UI (`https://127.0.0.1:8200/ui/vault/auth/authentik/oidc/callback`)
 
 ## Troubleshooting
+
+### Missing /etc/hosts Entry
+
+**Symptom:** OIDC authentication fails with redirect URI or hostname resolution errors.
+
+**Solution:**
+```bash
+sudo sh -c 'echo "127.0.0.1       authentik-server" >> /etc/hosts'
+cat /etc/hosts | grep authentik-server
+ping authentik-server
+```
 
 ### Authentik Not Starting
 
 ```bash
-# Check logs
-task authentik:logs
-
-# Check specific service
-task authentik:logs-server
-task authentik:logs-postgres
-
-# Restart services
-task authentik:restart
+task authentik:logs              # All services
+task authentik:logs-server       # Authentik only
+task authentik:logs-postgres     # PostgreSQL only
+task authentik:restart           # Restart services
 ```
 
 ### OIDC Discovery URL Not Accessible
 
 ```bash
 # Verify Authentik is running
-curl -k http://localhost:9000/-/health/live/
+curl -k http://authentik-server:9000/-/health/live/
 
 # Check OIDC configuration
-curl -k http://localhost:9000/application/o/vault/.well-known/openid-configuration
+curl -k http://authentik-server:9000/application/o/vault/.well-known/openid-configuration
+
+# Verify /etc/hosts entry
+cat /etc/hosts | grep authentik-server
 ```
 
 ### Authentication Fails
@@ -397,9 +263,6 @@ vault read -namespace=admin auth/oidc/config
 vault list identity/group/name
 vault list -namespace=admin identity/group/name
 
-# Check group aliases
-vault list identity/group-alias/id
-
 # Verify entity after login
 ENTITY_ID=$(vault token lookup -format=json | jq -r '.data.entity_id')
 vault read identity/entity/id/$ENTITY_ID
@@ -408,39 +271,36 @@ vault read identity/entity/id/$ENTITY_ID
 ### Terraform Errors
 
 ```bash
-# Refresh state
-terraform refresh
-
-# Check for drift
-terraform plan
-
-# Re-apply if needed
-terraform apply
+terraform refresh    # Refresh state
+terraform plan       # Check for drift
+terraform apply      # Re-apply if needed
 ```
 
 ### Network Issues
 
 ```bash
-# Verify network exists
+# Verify Docker network
 docker network ls | grep docker-vault-stack
-
-# Check if services are on the same network
 docker network inspect docker-vault-stack
+
+# Verify /etc/hosts entry
+cat /etc/hosts | grep authentik-server
+ping authentik-server
 ```
 
 ## Available Tasks
 
-From the project root, use `task authentik:<command>`:
+From project root, use `task authentik:<command>`:
 
 | Command | Description |
 |---------|-------------|
-| `all` | Complete setup workflow (up + init + apply) |
+| `all` | Complete setup workflow (admin + terraform) |
 | `up` | Start Authentik stack |
 | `down` | Stop Authentik stack |
-| `restart` | Restart Authentik stack |
-| `status` | Show status of all services |
-| `health` | Check health of all services |
-| `logs` | View logs from all services |
+| `restart` | Restart Authentik services |
+| `status` | Show container status |
+| `health` | Check service health |
+| `logs` | View all service logs |
 | `logs-server` | View Authentik server logs |
 | `logs-worker` | View Authentik worker logs |
 | `logs-postgres` | View PostgreSQL logs |
@@ -449,35 +309,22 @@ From the project root, use `task authentik:<command>`:
 | `apply` | Apply Terraform configuration |
 | `destroy` | Destroy Terraform resources |
 | `test-auth` | Test OIDC authentication |
-| `check-policies` | Check current token policies |
-| `bootstrap` | Complete setup from scratch |
-| `clean` | Remove all containers and volumes |
+| `check-policies` | Check token policies |
+| `redeploy` | Clean slate deployment (removes volumes) |
+| `purge` | Remove Terraform state and disable Vault OIDC |
 
 ## Cleanup
 
-### Remove Terraform Resources
-
 ```bash
+# Remove Terraform resources
 task authentik:destroy
-```
 
-### Stop Services
-
-Stop all services (including Authentik) from project root:
-
-```bash
+# Stop all services (from project root)
 task down
-```
 
-### Redeploy Authentik (Clean Slate)
-
-To stop Authentik services, remove volumes, and restart:
-
-```bash
+# Clean slate deployment (removes volumes)
 task authentik:redeploy
 ```
-
-This will prompt for confirmation before deleting all Authentik data and restarting services.
 
 ## Additional Resources
 
@@ -488,11 +335,12 @@ This will prompt for confirmation before deleting all Authentik data and restart
 
 ## Notes
 
-- This lab uses Authentik without Redis for simplified deployment
-- All services communicate over the parent project's Docker network
-- TLS verification is disabled for local development (not for production)
-- Default passwords should be changed for production use
-- API tokens should be rotated regularly
+- No Redis required (simplified deployment)
+- All services communicate on `docker-vault-stack` network
+- TLS verification disabled for local development
+- `/etc/hosts` entry for `authentik-server` is required
+- Change default passwords for production use
+- Rotate API tokens regularly
 
 ## License
 

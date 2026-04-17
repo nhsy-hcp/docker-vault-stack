@@ -17,6 +17,7 @@ This environment provides:
 ### Training Labs
 Located in `/labs/` with specific Vault feature demonstrations:
 - **ACL Templating** - AppRole & Userpass authentication with dynamic policies
+- **Authentik OIDC Integration** - Open-source identity provider with OIDC authentication
 - **AWS Authentication** - IAM role-based authentication
 - **Certificate Authentication** - TLS client certificate authentication
 - **Cross-Namespace Secrets** - Secret sharing across namespaces
@@ -51,10 +52,6 @@ Copy `.env.example` to `.env` and configure:
 1. Add your Vault Enterprise license to `VAULT_LICENSE`
 2. `VAULT_ADDR` is pre-configured as `http://localhost:8200`
 
-> **License Options:**
-> - Request enterprise trial: https://www.hashicorp.com/products/vault/trial
-> - Use Vault BSL: Change `docker-compose.yml` to use `hashicorp/vault-enterprise:1.19`
-
 ## Quick Start
 
 ### Initial Setup
@@ -81,6 +78,7 @@ vault token lookup
 
 ### Accessing Services
 - **Vault UI**: http://localhost:8200
+- **Authentik UI**: http://localhost:9000 (when running Authentik lab)
 - **Alloy**: http://localhost:12345
 - **Grafana**: http://localhost:3000
 - **Prometheus**: http://localhost:9090
@@ -144,6 +142,9 @@ Run benchmarks to test Vault performance and generate metrics:
 task benchmark
 ```
 
+
+
+
 ## Troubleshooting
 ### Clean Reset
 ```bash
@@ -170,6 +171,7 @@ source .env
 │   └── prometheus/           # Prometheus configuration
 ├── labs/                     # Training exercises
 │   ├── acl-templating/       # Advanced ACL patterns
+│   ├── authentik/           # Authentik OIDC integration
 │   ├── aws-auth/            # Cloud authentication
 │   ├── cert-auth/           # Certificate authentication
 │   ├── cross-namespace-secrets/ # Multi-tenant secrets
