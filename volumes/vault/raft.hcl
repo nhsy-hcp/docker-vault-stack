@@ -2,6 +2,7 @@ ui                = true
 disable_mlock     = true
 default_lease_ttl = "1h"
 max_lease_ttl     = "24h"
+plugin_directory  = "/vault/plugins"
 
 api_addr          = "http://vault:8200"
 cluster_addr      = "http://vault:8201"
