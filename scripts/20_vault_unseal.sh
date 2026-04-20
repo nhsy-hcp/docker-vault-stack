@@ -3,7 +3,7 @@
 # Verify VAULT_ADDR is set (should be loaded by Taskfile from .env)
 if [ -z "$VAULT_ADDR" ]; then
     echo "Error: VAULT_ADDR not set"
-    echo "Please ensure .env file exists with: export VAULT_ADDR=http://localhost:8200"
+    echo "Please ensure .env file exists with: export VAULT_ADDR=http://vault.localhost:8200"
     echo "Run: source .env"
     exit 1
 fi
