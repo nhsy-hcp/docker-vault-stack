@@ -1,0 +1,3 @@
+{"id":"22405623-d598-44ab-9ec3-10686ad8aca7","ts":"2026-04-20T10:44:47.723Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/scripts/00_vault_vars.sh","version":"1.0.0","taskID":"3540c515-926d-4c09-8ef9-af84de510f03"}
+{"id":"972b3765-35e0-4b7c-9728-782c25b4c3a2","ts":"2026-04-20T10:45:03.201Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/scripts/10_vault_init.sh","version":"1.0.0","taskID":"3540c515-926d-4c09-8ef9-af84de510f03"}
+{"id":"cea9c406-0b4a-4f86-bd03-1a09345c7d31","ts":"2026-04-20T10:45:14.146Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/scripts/20_vault_unseal.sh","version":"1.0.0","taskID":"3540c515-926d-4c09-8ef9-af84de510f03"}
