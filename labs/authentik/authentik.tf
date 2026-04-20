@@ -70,7 +70,7 @@ resource "authentik_application" "vault" {
   name              = "HashiCorp Vault"
   slug              = "vault"
   protocol_provider = authentik_provider_oauth2.vault.id
-  meta_launch_url   = "https://127.0.0.1:8200"
+  meta_launch_url   = "http://vault.localhost:8200"
 }
 
 # Create Groups
