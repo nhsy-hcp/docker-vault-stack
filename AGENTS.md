@@ -140,7 +140,7 @@ Demonstrates Authentik OIDC integration with Vault for multi-namespace authentic
 
 **Critical Network Configuration:**
 - Terraform provider uses `http://localhost:9000` (host access)
-- Vault OIDC uses `http://authentik-server:9000` (Docker service name)
+- Vault OIDC uses `http://authentik.localhost:9000` (Docker network alias / service hostname)
 - Both services communicate on `docker-vault-stack` network
 
 **Lab Commands:**
