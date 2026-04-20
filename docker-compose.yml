@@ -139,7 +139,7 @@ services:
 
   authentik-postgres:
     image: docker.io/library/postgres:16-alpine
-    container_name: authentik-postgres
+    container_name: ${COMPOSE_PROJECT_NAME}_authentik-postgres
     restart: unless-stopped
     networks:
       default:
@@ -160,7 +160,7 @@ services:
 
   authentik:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
-    container_name: authentik-server
+    container_name: ${COMPOSE_PROJECT_NAME}_authentik
     restart: unless-stopped
     networks:
       default:
@@ -189,7 +189,7 @@ services:
 
   authentik-worker:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
-    container_name: authentik-worker
+    container_name: ${COMPOSE_PROJECT_NAME}_authentik-worker
     restart: unless-stopped
     networks:
       default:

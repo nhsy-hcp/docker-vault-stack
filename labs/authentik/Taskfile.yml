@@ -15,12 +15,12 @@ tasks:
   logs:
     desc: View logs from all services
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-postgres authentik-server authentik-worker
+      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-postgres authentik authentik-worker
 
   logs-server:
     desc: View Authentik server logs
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-server
+      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik
 
   logs-worker:
     desc: View Authentik worker logs
@@ -37,23 +37,23 @@ tasks:
     prompt: This will delete all Authentik data and restart services. Continue?
     cmds:
       - echo "Stopping Authentik services..."
-      - docker compose -f {{.COMPOSE_FILE}} stop authentik-postgres authentik-server authentik-worker
+      - docker compose -f {{.COMPOSE_FILE}} stop authentik-postgres authentik authentik-worker
       - echo "Removing volumes..."
-      - docker compose -f {{.COMPOSE_FILE}} down -v authentik-postgres authentik-server authentik-worker
+      - docker compose -f {{.COMPOSE_FILE}} down -v authentik-postgres authentik authentik-worker
       - echo "Starting Authentik services..."
-      - docker compose -f {{.COMPOSE_FILE}} up -d authentik-postgres authentik-server authentik-worker
+      - docker compose -f {{.COMPOSE_FILE}} up -d authentik-postgres authentik authentik-worker
       - echo "Authentik redeployed successfully"
       - echo "Access Authentik at http://authentik.localhost:9000"
 
   restart:
     desc: Restart Authentik stack
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} restart authentik-postgres authentik-server authentik-worker
+      - docker compose -f {{.COMPOSE_FILE}} restart authentik-postgres authentik authentik-worker
 
   status:
     desc: Show status of all services
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} ps authentik-postgres authentik-server authentik-worker
+      - docker compose -f {{.COMPOSE_FILE}} ps authentik-postgres authentik authentik-worker
 
   init:
     desc: Initialize Terraform
@@ -130,8 +130,25 @@ tasks:
 
   health:
     desc: Check health of all services
+    silent: true
     cmds:
-      - echo "Checking PostgreSQL..."
-      - docker compose -f {{.COMPOSE_FILE}} exec authentik-postgres pg_isready -U authentik
-      - echo "Checking Authentik..."
-      - curl -f http://authentik.localhost:9000/-/health/live/ || echo "Authentik not ready"
+      - |
+        echo "=== Authentik Health Check ==="
+        echo ""
+        echo "PostgreSQL:"
+        if docker compose -f {{.COMPOSE_FILE}} exec authentik-postgres pg_isready -U authentik > /dev/null 2>&1; then
+          echo "  ✓ PostgreSQL is ready"
+        else
+          echo "  ✗ PostgreSQL is not ready"
+        fi
+        echo ""
+        echo "Authentik Server:"
+        if curl -sf http://authentik.localhost:9000/-/health/live/ > /dev/null 2>&1; then
+          echo "  ✓ Authentik is healthy"
+          echo "  URL: http://authentik.localhost:9000"
+        else
+          echo "  ✗ Authentik is not ready"
+        fi
+        echo ""
+        echo "Container Status:"
+        docker compose -f {{.COMPOSE_FILE}} ps authentik-postgres authentik authentik-worker
