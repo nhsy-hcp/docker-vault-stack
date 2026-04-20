@@ -50,7 +50,7 @@ cd docker-vault-stack
 **Environment Configuration:**
 Copy `.env.example` to `.env` and configure:
 1. Add your Vault Enterprise license to `VAULT_LICENSE`
-2. `VAULT_ADDR` is pre-configured as `http://localhost:8200`
+2. `VAULT_ADDR` is pre-configured as `http://vault.localhost:8200`
 
 ## Quick Start
 
@@ -77,12 +77,12 @@ vault token lookup
 ```
 
 ### Accessing Services
-- **Vault UI**: http://localhost:8200
-- **Authentik UI**: http://localhost:9000 (when running Authentik lab)
-- **Alloy**: http://localhost:12345
-- **Grafana**: http://localhost:3000
-- **Prometheus**: http://localhost:9090
-- **Loki**: http://localhost:3100
+- **Vault UI**: http://vault.localhost:8200
+- **Authentik UI**: http://authentik.localhost:9000 (when running Authentik lab)
+- **Alloy**: http://alloy.localhost:12345
+- **Grafana**: http://grafana.localhost:3000
+- **Prometheus**: http://prometheus.localhost:9090
+- **Loki**: http://loki.localhost:3100
 
 ### Daily Usage
 After initial setup, restart with:
@@ -97,7 +97,7 @@ vault token lookup
 The `.env` file is the authoritative source for environment configuration. All scripts and Taskfile tasks source values from this file.
 
 **Required Variables:**
-- `VAULT_ADDR` - Vault server address (default: `http://localhost:8200`)
+- `VAULT_ADDR` - Vault server address (default: `http://vault.localhost:8200`)
 - `VAULT_TOKEN` - Root token (auto-populated by `task init` do not edit manually)
 - `VAULT_LICENSE` - Vault Enterprise license key
 

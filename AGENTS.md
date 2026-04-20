@@ -269,7 +269,7 @@ vault kv get -namespace=bu01 team1/app1
 - Vault logs: `task logs-vault`
 - All services: `task logs`
 - Vault status: `vault status`
-- UI access: http://localhost:8200 (Vault), http://localhost:3000 (Grafana)
+- UI access: http://vault.localhost:8200 (Vault), http://grafana.localhost:3000 (Grafana)
 
 ## Important Notes
 
