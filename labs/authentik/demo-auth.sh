@@ -14,8 +14,8 @@ if ! vault status &>/dev/null; then
 fi
 
 # Check if Authentik is accessible
-if ! curl -sf http://localhost:9000/-/health/live/ &>/dev/null; then
-    echo "❌ Error: Authentik is not accessible at http://localhost:9000"
+if ! curl -sf http://authentik.localhost:9000/-/health/live/ &>/dev/null; then
+    echo "❌ Error: Authentik is not accessible at http://authentik.localhost:9000"
     echo "Please ensure Authentik is running."
     exit 1
 fi

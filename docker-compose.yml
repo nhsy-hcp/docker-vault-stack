@@ -5,6 +5,10 @@ services:
     restart: unless-stopped
     ports:
       - "${VAULT_PORT:-8200}:8200"
+    networks:
+      default:
+        aliases:
+          - vault.localhost
     environment:
       VAULT_ADDR: ${VAULT_ADDR:-http://localhost:8200}
       VAULT_LICENSE: ${VAULT_LICENSE:-}
@@ -34,6 +38,10 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    networks:
+      default:
+        aliases:
+          - grafana.localhost
     configs:
       - source: grafana-datasources
         target: /etc/grafana/provisioning/datasources/datasources.yml
@@ -55,6 +63,10 @@ services:
     restart: unless-stopped
     ports:
       - "9090:9090"
+    networks:
+      default:
+        aliases:
+          - prometheus.localhost
     configs:
       - source: prometheus-config
         target: /etc/prometheus/prometheus.yml
@@ -77,6 +89,10 @@ services:
     restart: unless-stopped
     ports:
       - "3100:3100"
+    networks:
+      default:
+        aliases:
+          - loki.localhost
 #    configs:
 #      - source: loki-config
 #        target: /etc/loki/loki.yml
@@ -93,6 +109,10 @@ services:
 #    deploy:
 #      replicas: 0
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - alloy.localhost
     environment:
       - VAULT_ADDR=https://vault:8200
       #- VAULT_TOKEN=/etc/prometheus/prometheus-token
@@ -121,6 +141,10 @@ services:
     image: docker.io/library/postgres:16-alpine
     container_name: authentik-postgres
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - authentik-postgres.localhost
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 30s
@@ -134,10 +158,14 @@ services:
       POSTGRES_USER: ${PG_USER:-authentik}
       POSTGRES_DB: ${PG_DB:-authentik}
 
-  authentik-server:
+  authentik:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
     container_name: authentik-server
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - authentik.localhost
     command: server
     environment:
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY must be set in .env file}
@@ -163,6 +191,10 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
     container_name: authentik-worker
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - authentik-worker.localhost
     command: worker
     environment:
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY must be set in .env file}
@@ -177,7 +209,7 @@ services:
       - authentik-templates:/templates
     depends_on:
       - authentik-postgres
-      - authentik-server
+      - authentik
     user: root
     shm_size: 512mb
 

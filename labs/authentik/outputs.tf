@@ -1,5 +1,5 @@
 output "authentik_url" {
-  value       = "http://localhost:9000"
+  value       = "http://authentik.localhost:9000"
   description = "Authentik server URL (from AUTHENTIK_URL environment variable)"
 }
 
@@ -48,6 +48,6 @@ output "test_users" {
 }
 
 output "authentik_end_session_endpoint" {
-  value       = "http://authentik-server:9000/application/o/${authentik_application.vault.slug}/end-session/"
-  description = "Authentik end-session endpoint URL for logout (uses Docker service name)"
+  value       = "http://authentik.localhost:9000/application/o/${authentik_application.vault.slug}/end-session/"
+  description = "Authentik end-session endpoint URL for logout"
 }

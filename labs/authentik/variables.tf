@@ -1,7 +1,7 @@
 variable "vault_authentik_url" {
   description = "Authentik server URL for Vault OIDC (use Docker service name - Vault and Authentik are on same network)"
   type        = string
-  default     = "http://authentik-server:9000"
+  default     = "http://authentik.localhost:9000"
 }
 
 variable "vault_oidc_mount_path" {

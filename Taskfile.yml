@@ -31,9 +31,6 @@ tasks:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
-      # - test -f ./volumes/vault/ca.crt
-      # - test -f ./volumes/vault/localhost.crt
-      # - test -f ./volumes/vault/localhost.key
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up -d --pull=missing
@@ -48,9 +45,6 @@ tasks:
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
-      # - test -f ./volumes/vault/ca.crt
-      # - test -f ./volumes/vault/localhost.crt
-      # - test -f ./volumes/vault/localhost.key
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up vault -d --pull=missing
@@ -137,16 +131,16 @@ tasks:
 
   ui:
     cmds:
-      - open http://localhost:8200
+      - open http://vault.localhost:8200
       - ./scripts/00_vault_vars.sh
       - |
-        echo "Alloy: http://localhost:12345"
-        echo "Authentik: http://localhost:9000"
-        echo "Grafana: http://localhost:3000"
-        echo "Prometheus: http://localhost:9090"
-        echo "Vault: http://localhost:8200"
+        echo "Alloy: http://alloy.localhost:12345"
+        echo "Authentik: http://authentik.localhost:9000"
+        echo "Grafana: http://grafana.localhost:3000"
+        echo "Prometheus: http://prometheus.localhost:9090"
+        echo "Vault: http://vault.localhost:8200"
 
-        echo "Authentik End Session: http://authentik-server:9000/application/o/vault/end-session/"
+        echo "Authentik End Session: http://authentik.localhost:9000/application/o/vault/end-session/"
 
   token:
     cmds:

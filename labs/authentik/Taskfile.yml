@@ -43,7 +43,7 @@ tasks:
       - echo "Starting Authentik services..."
       - docker compose -f {{.COMPOSE_FILE}} up -d authentik-postgres authentik-server authentik-worker
       - echo "Authentik redeployed successfully"
-      - echo "Access Authentik at http://localhost:9000"
+      - echo "Access Authentik at http://authentik.localhost:9000"
 
   restart:
     desc: Restart Authentik stack
@@ -122,7 +122,7 @@ tasks:
       - echo "Ensure Authentik services are running - task up"
       - echo "Waiting for Authentik to be ready..."
       - sleep 30
-      - echo "Access Authentik at http://localhost:9000"
+      - echo "Access Authentik at http://authentik.localhost:9000"
       - echo "1. Login with admin credentials"
       - echo "2. Generate API token - Admin Interface > Tokens > Create"
       - echo "3. Copy token to .env as AUTHENTIK_TOKEN"
@@ -134,4 +134,4 @@ tasks:
       - echo "Checking PostgreSQL..."
       - docker compose -f {{.COMPOSE_FILE}} exec authentik-postgres pg_isready -U authentik
       - echo "Checking Authentik..."
-      - curl -f http://localhost:9000/-/health/live/ || echo "Authentik not ready"
+      - curl -f http://authentik.localhost:9000/-/health/live/ || echo "Authentik not ready"

@@ -19,7 +19,7 @@ echo ""
 # Configuration
 ADMIN_USER="${AUTHENTIK_ADMIN_USER:-akadmin}"
 NEW_PASSWORD="${AUTHENTIK_ADMIN_PASSWORD:?AUTHENTIK_ADMIN_PASSWORD must be set in .env file}"
-AUTHENTIK_URL="http://localhost:9000"
+AUTHENTIK_URL="http://authentik.localhost:9000"
 
 # Generate AUTHENTIK_SECRET_KEY if not set or is placeholder
 if [ -z "${AUTHENTIK_SECRET_KEY:-}" ] || [ "${AUTHENTIK_SECRET_KEY}" = "CHANGE_ME_GENERATE_RANDOM_KEY" ]; then
@@ -131,7 +131,7 @@ except Exception as e:
 EOFPYTHON
 
 # Execute Python script in container
-RESULT=$(docker compose -f ../../docker-compose.yml exec -T authentik-server python < /tmp/authentik_setup.py 2>&1)
+RESULT=$(docker compose -f ../../docker-compose.yml exec -T authentik python < /tmp/authentik_setup.py 2>&1)
 
 # Clean up temp file
 rm -f /tmp/authentik_setup.py
