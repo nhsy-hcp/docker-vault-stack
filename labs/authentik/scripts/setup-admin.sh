@@ -164,34 +164,36 @@ echo "✅ API token generated"
 echo ""
 echo "Step 2: Updating .env file..."
 
-if [ -f .env ]; then
+ENV_FILE="../../.env"
+
+if [ -f "${ENV_FILE}" ]; then
     # Update or add AUTHENTIK_TOKEN
-    if grep -q "^export AUTHENTIK_TOKEN=" .env || grep -q "^AUTHENTIK_TOKEN=" .env; then
-        sed -i '' "s|^export AUTHENTIK_TOKEN=.*|export AUTHENTIK_TOKEN=${API_TOKEN}|" .env
-        sed -i '' "s|^AUTHENTIK_TOKEN=.*|export AUTHENTIK_TOKEN=${API_TOKEN}|" .env
+    if grep -q "^export AUTHENTIK_TOKEN=" "${ENV_FILE}" || grep -q "^AUTHENTIK_TOKEN=" "${ENV_FILE}"; then
+        sed -i '' "s|^export AUTHENTIK_TOKEN=.*|export AUTHENTIK_TOKEN=${API_TOKEN}|" "${ENV_FILE}"
+        sed -i '' "s|^AUTHENTIK_TOKEN=.*|export AUTHENTIK_TOKEN=${API_TOKEN}|" "${ENV_FILE}"
     else
-        echo "export AUTHENTIK_TOKEN=${API_TOKEN}" >> .env
+        echo "export AUTHENTIK_TOKEN=${API_TOKEN}" >> "${ENV_FILE}"
     fi
 
     # Update or add AUTHENTIK_ADMIN_PASSWORD
-    if grep -q "^AUTHENTIK_ADMIN_PASSWORD=" .env; then
-        sed -i '' "s|^AUTHENTIK_ADMIN_PASSWORD=.*|AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}|" .env
+    if grep -q "^AUTHENTIK_ADMIN_PASSWORD=" "${ENV_FILE}"; then
+        sed -i '' "s|^AUTHENTIK_ADMIN_PASSWORD=.*|AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}|" "${ENV_FILE}"
     else
-        echo "AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}" >> .env
+        echo "AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}" >> "${ENV_FILE}"
     fi
 
     # Update or add AUTHENTIK_ADMIN_USER
-    if grep -q "^AUTHENTIK_ADMIN_USER=" .env; then
-        sed -i '' "s|^AUTHENTIK_ADMIN_USER=.*|AUTHENTIK_ADMIN_USER=${ADMIN_USER}|" .env
+    if grep -q "^AUTHENTIK_ADMIN_USER=" "${ENV_FILE}"; then
+        sed -i '' "s|^AUTHENTIK_ADMIN_USER=.*|AUTHENTIK_ADMIN_USER=${ADMIN_USER}|" "${ENV_FILE}"
     else
-        echo "AUTHENTIK_ADMIN_USER=${ADMIN_USER}" >> .env
+        echo "AUTHENTIK_ADMIN_USER=${ADMIN_USER}" >> "${ENV_FILE}"
     fi
 
     echo "✅ Updated .env file"
 else
-    echo "export AUTHENTIK_TOKEN=${API_TOKEN}" > .env
-    echo "AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}" >> .env
-    echo "AUTHENTIK_ADMIN_USER=${ADMIN_USER}" >> .env
+    echo "export AUTHENTIK_TOKEN=${API_TOKEN}" > "${ENV_FILE}"
+    echo "AUTHENTIK_ADMIN_PASSWORD=${NEW_PASSWORD}" >> "${ENV_FILE}"
+    echo "AUTHENTIK_ADMIN_USER=${ADMIN_USER}" >> "${ENV_FILE}"
     echo "✅ Created .env file"
 fi
 

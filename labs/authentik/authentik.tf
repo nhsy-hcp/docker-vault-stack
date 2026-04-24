@@ -71,6 +71,10 @@ resource "authentik_application" "vault" {
   slug              = "vault"
   protocol_provider = authentik_provider_oauth2.vault.id
   meta_launch_url   = "http://vault.localhost:8200"
+
+  backchannel_providers = var.enable_scim ? [
+    tonumber(authentik_provider_scim.vault[0].id),
+  ] : []
 }
 
 # Create Groups

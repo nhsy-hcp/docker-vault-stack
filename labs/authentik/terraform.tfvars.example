@@ -33,3 +33,7 @@ authentik_users = {
     groups       = ["vault-user", "vault-tn001-team2-reader"]
   }
 }
+
+# Uncomment to enable SCIM provisioning (requires Vault Enterprise)
+# enable_scim     = true
+# vault_scim_addr = "http://vault.localhost:8200"

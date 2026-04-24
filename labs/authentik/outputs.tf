@@ -51,3 +51,34 @@ output "authentik_end_session_endpoint" {
   value       = "http://authentik.localhost:9000/application/o/${authentik_application.vault.slug}/end-session/"
   description = "Authentik end-session endpoint URL for logout"
 }
+
+output "scim_enabled" {
+  value       = var.enable_scim
+  description = "Whether SCIM provisioning is enabled"
+}
+
+output "scim_endpoint" {
+  value       = var.enable_scim ? "${var.vault_scim_addr}/v1/identity/scim/v2" : null
+  description = "Vault SCIM endpoint URLs (internal Docker addresses)"
+}
+
+output "authentik_scim_provider_id" {
+  value       = var.enable_scim ? authentik_provider_scim.vault[0].id : null
+  description = "Authentik SCIM provider ID"
+}
+
+output "scim_bearer_token" {
+  value       = var.enable_scim ? vault_token.scim[0].client_token : null
+  sensitive   = true
+  description = "Vault SCIM bearer token"
+}
+
+output "scim_entity_alias_id" {
+  value       = var.enable_scim ? vault_identity_entity_alias.scim[0].id : null
+  description = "Vault identity entity alias ID"
+}
+
+output "scim_entity_alias_name" {
+  value       = var.enable_scim ? vault_identity_entity_alias.scim[0].name : null
+  description = "Vault identity entity alias name"
+}

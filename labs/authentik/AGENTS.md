@@ -45,7 +45,7 @@ This lab demonstrates HashiCorp Vault integration with Authentik (open-source id
 
 ### Key Files
 - `docker-compose.yml`: Authentik stack definition
-- `setup-admin.sh`: Automated admin setup and token generation
+- `scripts/setup-admin.sh`: Automated admin setup and token generation
 - `Taskfile.yml`: Task automation (uses parent Taskfile's dotenv)
 - `.env`: Environment configuration (REQUIRED)
 - `*.tf`: Terraform configuration for Vault OIDC setup
@@ -82,7 +82,7 @@ COMPOSE_PROJECT_NAME=docker-vault-stack
 
 ### Important Notes
 
-1. **AUTHENTIK_ADMIN_PASSWORD is REQUIRED**: The `setup-admin.sh` script will fail if this is not set in `.env`
+1. **AUTHENTIK_ADMIN_PASSWORD is REQUIRED**: The `scripts/setup-admin.sh` script will fail if this is not set in `.env`
 2. **No Redis Required**: Authentik 2024.2+ removed Redis dependency
 3. **Dotenv Declaration**: This Taskfile cannot have `dotenv:` declaration as it's included by parent Taskfile
 4. **Environment Sourcing**: Tasks that need latest .env values use `source .env &&` prefix
@@ -100,14 +100,14 @@ task authentik:all
 ```
 
 This runs:
-1. `./setup-admin.sh` - Create admin user, set password, generate API token
+1. `./scripts/setup-admin.sh` - Create admin user, set password, generate API token
 2. `terraform init` - Initialize Terraform providers
 3. `terraform apply -auto-approve` - Create Vault OIDC configuration
 
 **Important**: If OIDC auth backends already exist in Vault, delete them first:
 ```bash
-vault auth disable oidc
-vault auth disable -namespace=admin oidc
+vault auth disable authentik
+vault auth disable -namespace=admin authentik
 task authentik:apply
 ```
 
@@ -120,7 +120,7 @@ task up
 cd labs/authentik
 
 # 1. Create admin user and generate API token
-./setup-admin.sh
+./scripts/setup-admin.sh
 # This will:
 # - Wait for Authentik to be ready (HTTP 200)
 # - Create/update admin user with password from .env
@@ -152,9 +152,9 @@ task authentik:all
 
 ## Setup Script Details
 
-### setup-admin.sh Behavior
+### scripts/setup-admin.sh Behavior
 
-The `setup-admin.sh` script:
+The `scripts/setup-admin.sh` script:
 
 1. **Loads .env file**: Uses `source .env` to get latest environment variables
 2. **Validates password**: Fails if `AUTHENTIK_ADMIN_PASSWORD` is not set
@@ -262,19 +262,19 @@ terraform show
 vault read auth/oidc/config
 
 # 5. Test OIDC authentication flow
-./demo-auth.sh
+./scripts/demo-auth.sh
 ```
 
 ## Troubleshooting
 
-### Issue: setup-admin.sh fails with "AUTHENTIK_ADMIN_PASSWORD must be set"
+### Issue: scripts/setup-admin.sh fails with "AUTHENTIK_ADMIN_PASSWORD must be set"
 
 **Solution**: Ensure `.env` file contains `AUTHENTIK_ADMIN_PASSWORD=<your-password>`
 
 ### Issue: Terraform asks for authentik_token variable
 
 **Solution**:
-1. Run `./setup-admin.sh` first to generate token
+1. Run `./scripts/setup-admin.sh` first to generate token
 2. Verify `.env` contains `AUTHENTIK_TOKEN=<token>`
 3. Ensure parent Taskfile has `dotenv: [.env]` declaration
 
@@ -360,7 +360,7 @@ authentik_users = {
 All bash scripts pass shellcheck validation:
 
 ```bash
-shellcheck setup-admin.sh generate-token.sh demo-auth.sh check-policies.sh
+shellcheck scripts/setup-admin.sh scripts/generate-token.sh scripts/demo-auth.sh scripts/check-policies.sh scripts/test-scim.sh
 ```
 
 Known info-level warnings:
@@ -379,3 +379,97 @@ terraform validate
 - [Authentik Documentation](https://docs.goauthentik.io/)
 - [Vault OIDC Auth Method](https://developer.hashicorp.com/vault/docs/auth/oidc)
 - [Terraform Authentik Provider](https://registry.terraform.io/providers/goauthentik/authentik/latest/docs)
+
+---
+
+## SCIM Lab
+
+Demonstrates Vault Enterprise SCIM 2.0 provisioning using Authentik as the SCIM client.
+Authentik automatically pushes users and groups to Vault, which creates Vault entities and
+identity groups without manual configuration.
+
+### Architecture
+
+```
+Authentik (SCIM provider)
+  └─► Vault root namespace   http://vault.localhost:8200/v1/identity/scim/v2
+```
+
+- Authentik users → Vault entities (no entity aliases)
+- Authentik groups → Vault internal identity groups
+- One SCIM client in Vault (root namespace), one SCIM provider in Authentik
+- Authentik SCIM provider attached as backchannel provider on the Vault OIDC application
+
+### Prerequisites
+
+- Vault Enterprise (SCIM is not available in OSS)
+- Authentik lab already applied (`task authentik:all`)
+
+### Enabling SCIM
+
+Set `enable_scim = true` in `terraform.tfvars` (or create from the example):
+
+```hcl
+# terraform.tfvars
+enable_scim = true
+# vault_scim_addr = "http://vault.localhost:8200"  # default
+```
+
+Then apply:
+
+```bash
+task authentik:apply
+```
+
+This will:
+1. Activate the SCIM feature flag in Vault (one-time, irreversible)
+2. Create a Vault SCIM client entity, policy, and token role in the root namespace
+3. Mint a renewable 24-hour bearer token for the SCIM client
+4. Register the SCIM client in Vault (`identity/scim/client/authentik`)
+5. Create an Authentik SCIM provider and attach it to the Vault application
+6. Authentik triggers an initial sync automatically
+
+### SCIM Tasks
+
+```bash
+# Verify provisioning (checks SCIM endpoints + Vault entities)
+task authentik:scim:test
+
+# Manually trigger a full sync in Authentik
+task authentik:scim:sync
+```
+
+### Outputs
+
+```bash
+# Show SCIM endpoint
+terraform output scim_endpoint
+
+# Retrieve bearer token (sensitive)
+terraform output -json scim_bearer_token
+
+# Get Authentik SCIM provider ID
+terraform output authentik_scim_provider_id
+```
+
+### Key Technical Notes
+
+- **SCIM activation is irreversible** — the `sys/activation-flags/enable-scim/activate` write
+  cannot be undone; this is a Vault Enterprise behaviour
+- **Bearer tokens in Terraform state** — acceptable for training; rotate via `terraform apply`
+  (recreates the `vault_token` resource)
+- **`vault_scim_addr` vs `VAULT_ADDR`** — Authentik reaches Vault via Docker networking at
+  `http://vault.localhost:8200`; the Terraform provider and CLI use `VAULT_ADDR` from `.env`
+- **Token period is 24 hours** — renewable; in production use short TTLs with a proper renewal process
+- **No entity aliases** — SCIM-provisioned entities are not linked to the OIDC auth mount
+
+### Disabling SCIM
+
+Set `enable_scim = false` and re-apply. This removes the Authentik SCIM providers and Vault
+SCIM client registrations. The Vault SCIM feature flag remains active (irreversible), but
+SCIM-provisioned entities/groups are cleaned up by Vault asynchronously after client deletion.
+
+### References
+
+- [Vault SCIM Overview](https://developer.hashicorp.com/vault/docs/enterprise/scim-overview)
+- [Authentik SCIM Provider](https://docs.goauthentik.io/docs/add-secure-apps/providers/scim/)

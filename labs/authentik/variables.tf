@@ -10,6 +10,18 @@ variable "vault_oidc_mount_path" {
   default     = "authentik"
 }
 
+variable "enable_scim" {
+  description = "Enable Vault Enterprise SCIM 2.0 provisioning via Authentik. Requires Vault Enterprise."
+  type        = bool
+  default     = false
+}
+
+variable "vault_scim_addr" {
+  description = "Vault address reachable from the Authentik container (used for SCIM provider URLs)."
+  type        = string
+  default     = "http://vault.localhost:8200"
+}
+
 variable "authentik_groups" {
   description = "Map of Authentik groups to create"
   type = map(object({

@@ -81,6 +81,7 @@ tasks:
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose down -v
+        rm vault-init.json
     ignore_error: true
     vars:
       STACK_NAME:
@@ -209,7 +210,6 @@ tasks:
 
   license:
     cmd: vault read -format=json /sys/license/status | jq '.data'
-
 
   lint:
     desc: Run pre-commit hooks on all files
