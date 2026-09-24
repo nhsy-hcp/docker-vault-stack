@@ -1,0 +1,88 @@
+---
+version: '3'
+
+vars:
+  # Lab-local compose file; interpolates variables from the root .env
+  COMPOSE: docker compose --env-file ../../.env -f docker-compose.yml
+  NETWORK: docker-vault-stack
+
+tasks:
+  all:
+    desc: Complete setup workflow (up + init + apply)
+    cmds:
+      - task: up
+      - task: init
+      - task: apply
+
+  up:
+    desc: Start Dex on the shared stack network
+    preconditions:
+      - sh: test -f ../../.env
+        msg: Root .env not found
+      - sh: docker network inspect {{.NETWORK}} > /dev/null 2>&1
+        msg: Network {{.NETWORK}} not found - start the core stack first (task up)
+    cmds:
+      - "{{.COMPOSE}} up -d --pull=missing"
+      - echo "Dex - http://dex.localhost:5556"
+
+  down:
+    desc: Stop and remove Dex container
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  restart:
+    desc: Restart Dex
+    cmds:
+      - "{{.COMPOSE}} restart"
+
+  logs:
+    desc: Tail Dex logs
+    cmds:
+      - "{{.COMPOSE}} logs -f"
+
+  status:
+    desc: Show Dex container status
+    cmds:
+      - "{{.COMPOSE}} ps"
+
+  health:
+    desc: Check Dex health
+    silent: true
+    cmds:
+      - |
+        echo "=== Dex Health Check ==="
+        if curl -sf http://dex.localhost:5556/healthz > /dev/null 2>&1; then
+          echo "  ✓ Dex is healthy"
+          echo "  URL: http://dex.localhost:5556"
+        else
+          echo "  ✗ Dex is not ready"
+        fi
+        echo ""
+        {{.COMPOSE}} ps
+
+  init:
+    desc: Initialize Terraform
+    cmds:
+      - terraform init
+
+  plan:
+    desc: Run Terraform plan
+    cmds:
+      - |
+        source ../../.env
+        terraform plan
+
+  apply:
+    desc: Apply Terraform configuration
+    cmds:
+      - |
+        source ../../.env
+        terraform apply -auto-approve
+
+  destroy:
+    desc: Destroy Vault configuration
+    prompt: This will destroy all Terraform-managed resources. Continue?
+    cmds:
+      - |
+        source ../../.env
+        terraform destroy -auto-approve

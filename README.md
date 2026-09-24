@@ -18,6 +18,7 @@ This environment provides:
 Located in `/labs/` with specific Vault feature demonstrations:
 - **ACL Templating** - AppRole & Userpass authentication with dynamic policies
 - **Authentik OIDC Integration** (optional lab) - Open-source identity provider with OIDC authentication
+- **Dex OIDC Integration** (optional lab) - Lightweight OIDC provider with static users and groups
 - **AWS Authentication** - IAM role-based authentication
 - **Certificate Authentication** - TLS client certificate authentication
 - **Cross-Namespace Secrets** - Secret sharing across namespaces
@@ -79,6 +80,7 @@ vault token lookup
 ### Accessing Services
 - **Vault UI**: http://vault.localhost:8200
 - **Authentik UI**: http://authentik.localhost:9000 (optional; start with `task authentik:up`)
+- **Dex**: http://dex.localhost:5556 (optional; start with `task dex:up`)
 - **Alloy**: http://alloy.localhost:12345
 - **Grafana**: http://grafana.localhost:3000
 - **Prometheus**: http://prometheus.localhost:9090
@@ -175,6 +177,7 @@ source .env
 │   ├── aws-auth/            # Cloud authentication
 │   ├── cert-auth/           # Certificate authentication
 │   ├── cross-namespace-secrets/ # Multi-tenant secrets
+│   ├── dex/                 # Dex OIDC integration (optional)
 │   ├── entra-id/            # Azure AD integration
 │   ├── namespaces/          # Multi-tenancy basics
 │   └── pki/                 # PKI operations

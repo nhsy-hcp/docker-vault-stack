@@ -1,0 +1,31 @@
+# Optional Dex lab stack.
+# Joins the root stack's network so Vault and Dex can reach each other
+# via their *.localhost aliases. Start the root stack first (task up).
+name: dex
+
+services:
+  dex:
+    image: dexidp/dex:${DEX_TAG:-v2.45.1}
+    container_name: docker-vault-stack_dex
+    restart: unless-stopped
+    volumes:
+      - ./dex-config.yaml:/etc/dex/config.docker.yaml
+    ports:
+      - "5556:5556"
+    command: dex serve /etc/dex/config.docker.yaml
+    networks:
+      default:
+        aliases:
+          - dex.localhost
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5556/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+# Shared with the root stack (created by `task up`); never create a separate network.
+networks:
+  default:
+    name: docker-vault-stack
+    external: true

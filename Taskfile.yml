@@ -8,10 +8,14 @@ vars:
   CONTAINER_RUNTIME: docker
 
 includes:
-  # Optional lab: start with `task authentik:up` after `task up`
+  # Optional labs: start with `task <lab>:up` after `task up`
   authentik:
     taskfile: ./labs/authentik/Taskfile.yml
     dir: ./labs/authentik
+    optional: true
+  dex:
+    taskfile: ./labs/dex/Taskfile.yml
+    dir: ./labs/dex
     optional: true
 
 tasks:
@@ -92,6 +96,7 @@ tasks:
     prompt: This will stop the stack and permanently remove Docker volumes, including Vault data. Continue?
     cmds:
       - task: authentik:down
+      - task: dex:down
       - |
         {{ .CONTAINER_RUNTIME }} compose down -v
         rm vault-init.json
@@ -159,7 +164,10 @@ tasks:
         echo "Prometheus: http://prometheus.localhost:9090"
         echo "Vault: http://vault.localhost:8200"
 
-        # Authentik is an optional lab; only show its URLs when running
+        # Optional labs; only show their URLs when running
+        if [ -n "$({{ .CONTAINER_RUNTIME }} ps -q -f name=^docker-vault-stack_dex$)" ]; then
+          echo "Dex: http://dex.localhost:5556"
+        fi
         if [ -n "$({{ .CONTAINER_RUNTIME }} ps -q -f name=^docker-vault-stack_authentik$)" ]; then
           echo "Authentik: http://authentik.localhost:9000"
           echo "Authentik End Session: http://authentik.localhost:9000/application/o/vault/end-session/"

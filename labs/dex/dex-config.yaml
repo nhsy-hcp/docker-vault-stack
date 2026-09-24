@@ -1,0 +1,43 @@
+issuer: http://dex.localhost:5556
+storage:
+  type: memory
+web:
+  http: 0.0.0.0:5556
+
+# Enable local users
+enablePasswordDB: true
+# Allow password grants with local users
+oauth2:
+  passwordConnector: local
+
+staticClients:
+  - id: vault
+    redirectURIs:
+      - 'http://vault.localhost:8200/ui/vault/auth/dex-oidc/oidc/callback'
+      - 'http://127.0.0.1:8250/oidc/callback'
+      - 'http://localhost:8250/oidc/callback'
+      - 'http://vault.localhost:8250/oidc/callback'
+    name: 'Vault'
+    secret: vault-secret
+
+staticPasswords:
+  - email: "vaultadmin@localhost"
+    hash: "$2y$10$zL0gsKyy506OMxReUeDpFexX1QH9ByDFKDw1zRl6loxzdQubHQe9C"  # password: password
+    username: "vaultadmin"
+    userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+    groups:
+      - "vault-admin"
+  - email: "testuser1@localhost"
+    hash: "$2y$10$zL0gsKyy506OMxReUeDpFexX1QH9ByDFKDw1zRl6loxzdQubHQe9C"
+    username: "testuser1"
+    userID: "b6009852-c28d-4a1d-8472-747209a25b34"
+    groups:
+      - "vault-user"
+      - "vault-tn001-team1-reader"
+  - email: "testuser2@localhost"
+    hash: "$2y$10$zL0gsKyy506OMxReUeDpFexX1QH9ByDFKDw1zRl6loxzdQubHQe9C"
+    username: "testuser2"
+    userID: "66997380-459f-432d-93cc-0e428df8f237"
+    groups:
+      - "vault-user"
+      - "vault-tn001-team2-reader"

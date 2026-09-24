@@ -208,6 +208,21 @@ The lab requires specific environment variables in `.env`:
 - [Authentik Documentation](https://docs.goauthentik.io/)
 - [Vault OIDC Auth Method](https://developer.hashicorp.com/vault/docs/auth/oidc)
 
+### `/labs/dex/`
+Demonstrates Dex as a lightweight OIDC provider for Vault (root and admin namespaces).
+
+**Optional lab:** Dex runs as its own compose project (`labs/dex/docker-compose.yml`) on the root stack's `docker-vault-stack` network (external). Storage is in-memory, so the container is stateless. Image tag is set by `DEX_TAG` (default `v2.45.1`, the minimum for groups in `staticPasswords`).
+
+**Lab Commands:**
+```bash
+# From project root - start the core stack, then Dex
+task up
+task dex:all        # up + terraform init + apply
+
+task dex:up | dex:down | dex:restart | dex:status | dex:health | dex:logs
+task dex:plan | dex:apply | dex:destroy
+```
+
 ## Working with Labs
 
 ### Terraform Patterns
