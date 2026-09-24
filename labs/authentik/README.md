@@ -107,8 +107,8 @@ No manual `/etc/hosts` entry is required for the Authentik lab alias flow.
 
 ```bash
 # From project root
-task up                  # Start all services
-task authentik:all       # Complete setup (admin + terraform)
+task up                  # Start the core stack (creates the shared network)
+task authentik:all       # Start Authentik + complete setup (admin + terraform)
 ```
 
 This runs:
@@ -211,8 +211,8 @@ vault read identity/entity/id/$ENTITY_ID
 **Solution:**
 ```bash
 curl -I http://authentik.localhost:9000
-docker compose -f ../../docker-compose.yml config
-docker compose -f ../../docker-compose.yml ps authentik-server
+docker compose --env-file ../../.env -f docker-compose.yml config
+task authentik:status
 ```
 
 ### Authentik Not Starting
@@ -234,7 +234,7 @@ curl -k http://authentik.localhost:9000/-/health/live/
 curl -k http://authentik.localhost:9000/application/o/vault/.well-known/openid-configuration
 
 # Check compose service state
-docker compose -f ../../docker-compose.yml ps authentik-server
+task authentik:status
 ```
 
 ### Authentication Fails

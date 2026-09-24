@@ -24,7 +24,9 @@ services:
     volumes:
       - vault-data:/vault/file  # Need this volume to fudge permissions error
       - vault-logs:/vault/logs
-    command: server
+      - ./volumes/vault/vault-entrypoint.sh:/usr/local/bin/vault-entrypoint.sh:ro
+    user: root
+    entrypoint: ["/usr/local/bin/vault-entrypoint.sh"]
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8200/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"]
       interval: 5s
@@ -137,82 +139,6 @@ services:
     depends_on:
       - loki
 
-  authentik-postgres:
-    image: docker.io/library/postgres:16-alpine
-    container_name: ${COMPOSE_PROJECT_NAME}_authentik-postgres
-    restart: unless-stopped
-    networks:
-      default:
-        aliases:
-          - authentik-postgres.localhost
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    volumes:
-      - authentik-postgres:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: ${PG_PASS}
-      POSTGRES_USER: ${PG_USER:-authentik}
-      POSTGRES_DB: ${PG_DB:-authentik}
-
-  authentik:
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
-    container_name: ${COMPOSE_PROJECT_NAME}_authentik
-    restart: unless-stopped
-    networks:
-      default:
-        aliases:
-          - authentik.localhost
-    command: server
-    environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY must be set in .env file}
-      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
-      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
-      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
-      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
-      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:-admin}
-      AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN:-}
-    volumes:
-      - authentik-media:/media
-      - authentik-templates:/templates
-    ports:
-      - "9000:9000"
-#      - "9443:9443"
-    depends_on:
-      authentik-postgres:
-        condition: service_healthy
-    shm_size: 512mb
-
-  authentik-worker:
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
-    container_name: ${COMPOSE_PROJECT_NAME}_authentik-worker
-    restart: unless-stopped
-    networks:
-      default:
-        aliases:
-          - authentik-worker.localhost
-    command: worker
-    environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY must be set in .env file}
-      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
-      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
-      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
-      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - authentik-media:/media
-      - authentik-templates:/templates
-    depends_on:
-      - authentik-postgres
-      - authentik
-    user: root
-    shm_size: 512mb
-
 configs:
   vault-config:
     file: ./volumes/vault/raft.hcl
@@ -241,6 +167,3 @@ volumes:
   alloy-data:
   vault-data:
   vault-logs:
-  authentik-postgres:
-  authentik-media:
-  authentik-templates:

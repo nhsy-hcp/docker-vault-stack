@@ -67,7 +67,9 @@ echo ""
 echo "Step 1: Setting admin password and creating API token via Python..."
 
 # Create temporary Python script
-cat > /tmp/authentik_setup.py << EOFPYTHON
+SETUP_PY=$(mktemp)
+trap 'rm -f "$SETUP_PY"' EXIT
+cat > "$SETUP_PY" << EOFPYTHON
 import os
 import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "authentik.root.settings")
@@ -112,13 +114,17 @@ try:
     # Delete existing token if it exists
     Token.objects.filter(identifier="terraform-token").delete()
 
-    # Create new API token
+    # Create new API token with 24-hour expiry
+    from datetime import timedelta
+    from django.utils import timezone
+
     token = Token.objects.create(
         identifier="terraform-token",
         user=user,
         intent=TokenIntents.INTENT_API,
-        description="Terraform API Token",
-        expiring=False,
+        description="Terraform API Token (24h expiry)",
+        expiring=True,
+        expires=timezone.now() + timedelta(hours=24),
     )
 
     print(f"TOKEN:{token.key}")
@@ -131,10 +137,10 @@ except Exception as e:
 EOFPYTHON
 
 # Execute Python script in container
-RESULT=$(docker compose -f ../../docker-compose.yml exec -T authentik python < /tmp/authentik_setup.py 2>&1)
+RESULT=$(docker compose --env-file ../../.env -f docker-compose.yml exec -T authentik python < "$SETUP_PY" 2>&1)
 
 # Clean up temp file
-rm -f /tmp/authentik_setup.py
+rm -f "$SETUP_PY"
 
 # Parse the result
 if echo "$RESULT" | grep -q "ERROR:"; then

@@ -44,7 +44,7 @@ This lab demonstrates HashiCorp Vault integration with Authentik (open-source id
 - Both services are on the same Docker network and can communicate using service names
 
 ### Key Files
-- `docker-compose.yml`: Authentik stack definition
+- `docker-compose.yml`: Optional Authentik stack (project `authentik`), attached to the external `docker-vault-stack` network created by the root stack
 - `scripts/setup-admin.sh`: Automated admin setup and token generation
 - `Taskfile.yml`: Task automation (uses parent Taskfile's dotenv)
 - `.env`: Environment configuration (REQUIRED)
@@ -92,7 +92,7 @@ COMPOSE_PROJECT_NAME=docker-vault-stack
 ### Option 1: Automated End-to-End Setup
 
 ```bash
-# From project root - start all services
+# From project root - start the core stack
 task up
 
 # Run complete Authentik setup
@@ -100,9 +100,10 @@ task authentik:all
 ```
 
 This runs:
-1. `./scripts/setup-admin.sh` - Create admin user, set password, generate API token
-2. `terraform init` - Initialize Terraform providers
-3. `terraform apply -auto-approve` - Create Vault OIDC configuration
+1. `task authentik:up` - Start Authentik services on the shared network
+2. `./scripts/setup-admin.sh` - Create admin user, set password, generate API token
+3. `terraform init` - Initialize Terraform providers
+4. `terraform apply -auto-approve` - Create Vault OIDC configuration
 
 **Important**: If OIDC auth backends already exist in Vault, delete them first:
 ```bash
@@ -114,8 +115,9 @@ task authentik:apply
 ### Option 2: Step-by-Step Setup
 
 ```bash
-# From project root - start all services
+# From project root - start the core stack, then Authentik
 task up
+task authentik:up
 
 cd labs/authentik
 
@@ -187,8 +189,10 @@ task authentik:health            # Health checks
 # Service management
 task authentik:restart           # Restart Authentik services
 task authentik:redeploy          # Stop, remove volumes, and restart
-task down                        # Stop all services (from project root)
-task up                          # Start all services (from project root)
+task authentik:up                # Start Authentik (core stack must be running)
+task authentik:down              # Stop Authentik (keeps volumes)
+task authentik:down:clean        # Stop Authentik and delete its volumes
+task down                        # Stop everything incl. Authentik (from project root)
 
 # Terraform operations
 task authentik:init              # Initialize Terraform
@@ -219,6 +223,9 @@ cd /path/to/docker-vault-stack
 # Ensure Vault is running
 task up
 task unseal
+
+# Start Authentik (optional lab)
+task authentik:up
 
 # Run complete Authentik setup
 task authentik:all

@@ -19,11 +19,14 @@ repos:
       - id: mixed-line-ending
         args: ['--fix=lf']
 
-  # Shell script linting
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
+  # Shell script linting (uses locally installed shellcheck: brew install shellcheck)
+  - repo: local
     hooks:
       - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
         args: ['--severity=warning']
         exclude: '^\.venv/|^\.terraform/'
 

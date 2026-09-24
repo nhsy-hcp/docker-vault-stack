@@ -138,6 +138,8 @@ Demonstrates Authentik OIDC integration with Vault for multi-namespace authentic
 - **Authentik Worker**: Background task processor
 - **Vault**: OIDC client (configured via Terraform)
 
+**Optional lab:** Authentik is not part of the core stack. Its services live in `labs/authentik/docker-compose.yml` and join the root stack's `docker-vault-stack` network (external). Start the core stack first, then `task authentik:up`.
+
 **Critical Network Configuration:**
 - Terraform provider uses `http://authentik.localhost:9000` (via Docker network alias)
 - Vault OIDC uses `http://authentik.localhost:9000` (Docker network alias / service hostname)
@@ -145,10 +147,11 @@ Demonstrates Authentik OIDC integration with Vault for multi-namespace authentic
 
 **Lab Commands:**
 ```bash
-# From project root - start all services
+# From project root - start the core stack, then Authentik
 task up
+task authentik:up
 
-# Run complete Authentik setup (automated end-to-end)
+# Run complete Authentik setup (automated end-to-end, includes authentik:up)
 task authentik:all
 
 # Step-by-step setup

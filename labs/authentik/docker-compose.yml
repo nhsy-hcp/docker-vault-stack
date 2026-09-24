@@ -1,0 +1,95 @@
+# Optional Authentik lab stack.
+# Joins the root stack's network so Vault and Authentik can reach each other
+# via their *.localhost aliases. Start the root stack first (task up).
+name: authentik
+
+services:
+  authentik-postgres:
+    image: docker.io/library/postgres:16-alpine
+    container_name: docker-vault-stack_authentik-postgres
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - authentik-postgres.localhost
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - authentik-postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASS:?PG_PASS must be set in .env file}
+      POSTGRES_USER: ${PG_USER:-authentik}
+      POSTGRES_DB: ${PG_DB:-authentik}
+
+  authentik:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
+    container_name: docker-vault-stack_authentik
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - authentik.localhost
+    command: server
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY must be set in .env file}
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:-admin}
+      AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN:-}
+    volumes:
+      - authentik-media:/media
+      - authentik-templates:/templates
+    ports:
+      - "9000:9000"
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+    shm_size: 512mb
+
+  authentik-worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.2}
+    container_name: docker-vault-stack_authentik-worker
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - authentik-worker.localhost
+    command: worker
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY must be set in .env file}
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - authentik-media:/media
+      - authentik-templates:/templates
+    depends_on:
+      - authentik-postgres
+      - authentik
+    user: root
+    shm_size: 512mb
+
+# Shared with the root stack (created by `task up`); never create a separate network.
+networks:
+  default:
+    name: docker-vault-stack
+    external: true
+
+# Explicit names keep the data from when Authentik lived in the root stack
+volumes:
+  authentik-postgres:
+    name: docker-vault-stack_authentik-postgres
+  authentik-media:
+    name: docker-vault-stack_authentik-media
+  authentik-templates:
+    name: docker-vault-stack_authentik-templates

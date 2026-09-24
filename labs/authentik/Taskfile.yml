@@ -2,58 +2,83 @@
 version: '3'
 
 vars:
-  COMPOSE_FILE: ../../docker-compose.yml
+  # Lab-local compose file; interpolates variables from the root .env
+  COMPOSE: docker compose --env-file ../../.env -f docker-compose.yml
+  NETWORK: docker-vault-stack
 
 tasks:
   all:
-    desc: Complete setup workflow (setup-admin + init + apply)
+    desc: Complete setup workflow (up + setup-admin + init + apply)
     cmds:
+      - task: up
       - ./scripts/setup-admin.sh
       - task: init
       - task: apply
 
+  up:
+    desc: Start Authentik services on the shared stack network
+    preconditions:
+      - sh: test -f ../../.env
+        msg: Root .env not found
+      - sh: docker network inspect {{.NETWORK}} > /dev/null 2>&1
+        msg: Network {{.NETWORK}} not found - start the core stack first (task up)
+    cmds:
+      - "{{.COMPOSE}} up -d --pull=missing"
+      - echo "Authentik - http://authentik.localhost:9000"
+
+  down:
+    desc: Stop and remove Authentik containers (keeps volumes)
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  down:clean:
+    desc: Stop Authentik and remove its volumes
+    prompt: This will delete all Authentik data. Continue?
+    cmds:
+      - "{{.COMPOSE}} down -v"
+
   logs:
     desc: View logs from all services
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-postgres authentik authentik-worker
+      - "{{.COMPOSE}} logs -f authentik-postgres authentik authentik-worker"
 
   logs-server:
     desc: View Authentik server logs
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik
+      - "{{.COMPOSE}} logs -f authentik"
 
   logs-worker:
     desc: View Authentik worker logs
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-worker
+      - "{{.COMPOSE}} logs -f authentik-worker"
 
   logs-postgres:
     desc: View PostgreSQL logs
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} logs -f authentik-postgres
+      - "{{.COMPOSE}} logs -f authentik-postgres"
 
   redeploy:
     desc: Stop Authentik services, remove volumes, and restart
     prompt: This will delete all Authentik data and restart services. Continue?
     cmds:
       - echo "Stopping Authentik services..."
-      - docker compose -f {{.COMPOSE_FILE}} stop authentik-postgres authentik authentik-worker
+      - "{{.COMPOSE}} stop authentik-postgres authentik authentik-worker"
       - echo "Removing volumes..."
-      - docker compose -f {{.COMPOSE_FILE}} down -v authentik-postgres authentik authentik-worker
+      - "{{.COMPOSE}} down -v authentik-postgres authentik authentik-worker"
       - echo "Starting Authentik services..."
-      - docker compose -f {{.COMPOSE_FILE}} up -d authentik-postgres authentik authentik-worker
+      - "{{.COMPOSE}} up -d authentik-postgres authentik authentik-worker"
       - echo "Authentik redeployed successfully"
       - echo "Access Authentik at http://authentik.localhost:9000"
 
   restart:
     desc: Restart Authentik stack
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} restart authentik-postgres authentik authentik-worker
+      - "{{.COMPOSE}} restart authentik-postgres authentik authentik-worker"
 
   status:
     desc: Show status of all services
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} ps authentik-postgres authentik authentik-worker
+      - "{{.COMPOSE}} ps authentik-postgres authentik authentik-worker"
 
   init:
     desc: Initialize Terraform
@@ -125,7 +150,7 @@ tasks:
       - ./scripts/test-scim.sh
 
   scim:sync:
-    desc: Trigger manual full-sync in Authentik for both SCIM providers
+    desc: View SCIM sync status (Note - Authentik syncs automatically on changes and hourly)
     dir: .
     silent: true
     cmds:
@@ -136,15 +161,22 @@ tasks:
           echo "SCIM not enabled or provider IDs not available. Apply with enable_scim=true first."
           exit 1
         fi
-        echo "Syncing SCIM provider (${SCIM_ID})..."
-        curl -svf -X POST \
-          -H "Authorization: Bearer ${AUTHENTIK_TOKEN}" \
-          "${AUTHENTIK_URL}/api/v3/providers/scim/${SCIM_ID}/sync/" | jq .
+        echo "=== SCIM Provider Status ==="
+        echo ""
+        echo "Provider ID: ${SCIM_ID}"
+        echo "Note: Authentik syncs automatically:"
+        echo "  - Real-time on user/group changes"
+        echo "  - Full sync every hour"
+        echo ""
+        echo "Provider Configuration:"
+        curl -sf -H "Authorization: Bearer ${AUTHENTIK_TOKEN}" \
+          "${AUTHENTIK_URL}/api/v3/providers/scim/${SCIM_ID}/" | \
+          jq -r '"  URL: \(.url)\n  Sync Page Size: \(.sync_page_size)\n  Sync Timeout: \(.sync_page_timeout)\n  Dry Run: \(.dry_run)"'
 
   bootstrap:
-    desc: Complete setup from scratch (requires Authentik services running via main stack)
+    desc: Complete setup from scratch (requires task authentik:up)
     cmds:
-      - echo "Ensure Authentik services are running - task up"
+      - echo "Ensure Authentik services are running - task authentik:up"
       - echo "Waiting for Authentik to be ready..."
       - sleep 30
       - echo "Access Authentik at http://authentik.localhost:9000"
@@ -161,7 +193,7 @@ tasks:
         echo "=== Authentik Health Check ==="
         echo ""
         echo "PostgreSQL:"
-        if docker compose -f {{.COMPOSE_FILE}} exec authentik-postgres pg_isready -U authentik > /dev/null 2>&1; then
+        if {{.COMPOSE}} exec authentik-postgres pg_isready -U authentik > /dev/null 2>&1; then
           echo "  ✓ PostgreSQL is ready"
         else
           echo "  ✗ PostgreSQL is not ready"
@@ -176,4 +208,4 @@ tasks:
         fi
         echo ""
         echo "Container Status:"
-        docker compose -f {{.COMPOSE_FILE}} ps authentik-postgres authentik authentik-worker
+        {{.COMPOSE}} ps authentik-postgres authentik authentik-worker

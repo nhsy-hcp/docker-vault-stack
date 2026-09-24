@@ -8,16 +8,20 @@ vars:
   CONTAINER_RUNTIME: docker
 
 includes:
+  # Optional lab: start with `task authentik:up` after `task up`
   authentik:
     taskfile: ./labs/authentik/Taskfile.yml
     dir: ./labs/authentik
+    optional: true
 
 tasks:
   default:
+    desc: Show available tasks
     cmds:
       - task --list
 
   all:
+    desc: Start stack and unseal Vault
     cmds:
       - task: up
       - task: unseal
@@ -28,6 +32,7 @@ tasks:
         echo "Using container runtime: {{ .CONTAINER_RUNTIME }}"
 
   up:
+    desc: Start the complete stack
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
@@ -42,6 +47,7 @@ tasks:
     silent: true
 
   vault-up:
+    desc: Start Vault service only
     preconditions:
       - test -f .env
       - test -f docker-compose.yml
@@ -53,32 +59,39 @@ tasks:
     silent: true
 
   restart:
+    desc: Restart Vault service
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose restart vault
 
   status:
+    desc: View Vault status
     cmds:
       - vault status
 
   init:
+    desc: Initialize Vault (first time only)
     cmds:
       - ./scripts/10_vault_init.sh {{.CLI_ARGS}}
 
   unseal:
+    desc: Unseal Vault after restart
     cmds:
       - |
         ./scripts/20_vault_unseal.sh
 
   backup:
+    desc: Create Raft snapshot backup
     cmds:
       - mkdir -p backups
       - vault operator raft snapshot save ./backups/backup-`date +"%Y%m%d-%H%M"`.snap
 
   down:
+    desc: Stop stack and remove volumes
     aliases: ["clean"]
     prompt: This will stop the stack and permanently remove Docker volumes, including Vault data. Continue?
     cmds:
+      - task: authentik:down
       - |
         {{ .CONTAINER_RUNTIME }} compose down -v
         rm vault-init.json
@@ -88,26 +101,31 @@ tasks:
         sh: basename "`pwd`"
 
   benchmark:
+    desc: Run performance benchmark
     cmds:
       - vault namespace create vault-benchmark || true
       - vault-benchmark run -config=./benchmark/config.hcl
 
   metrics:
+    desc: Access Vault metrics
     cmds:
       - |
         curl -sk --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics?format=prometheus"
 
   logs-vault:
+    desc: View Vault logs
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose logs -f --tail=100 vault
 
   logs:
+    desc: View all service logs
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose logs -f
 
   stop:
+    desc: Stop all services
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose stop
@@ -131,17 +149,21 @@ tasks:
         {{ .CONTAINER_RUNTIME }} compose stop
 
   ui:
+    desc: Open UIs in browser and display URLs
     cmds:
       - open http://vault.localhost:8200
       - ./scripts/00_vault_vars.sh
       - |
         echo "Alloy: http://alloy.localhost:12345"
-        echo "Authentik: http://authentik.localhost:9000"
         echo "Grafana: http://grafana.localhost:3000"
         echo "Prometheus: http://prometheus.localhost:9090"
         echo "Vault: http://vault.localhost:8200"
 
-        echo "Authentik End Session: http://authentik.localhost:9000/application/o/vault/end-session/"
+        # Authentik is an optional lab; only show its URLs when running
+        if [ -n "$({{ .CONTAINER_RUNTIME }} ps -q -f name=^docker-vault-stack_authentik$)" ]; then
+          echo "Authentik: http://authentik.localhost:9000"
+          echo "Authentik End Session: http://authentik.localhost:9000/application/o/vault/end-session/"
+        fi
 
   token:
     cmds:
@@ -171,6 +193,7 @@ tasks:
 
 
   config:
+    desc: Configure Vault audit logging
     cmds:
       - |
         export VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')
@@ -209,6 +232,7 @@ tasks:
         done
 
   license:
+    desc: View Vault license status
     cmd: vault read -format=json /sys/license/status | jq '.data'
 
   lint:
