@@ -14,7 +14,7 @@ This is a HashiCorp Vault training environment that provides a Compose stack (Po
 - **Training Labs**: Located in `/labs/` with specific Vault feature demonstrations
 
 ### Key Configuration Files
-- `docker-compose.yml`: Complete stack definition with Vault Enterprise and monitoring
+- `compose.yaml`: Complete stack definition with Vault Enterprise and monitoring
 - `volumes/vault/raft.hcl`: Vault server configuration with Raft backend (HTTP mode)
 - `volumes/alloy/config.alloy`: Alloy configuration for metrics collection and shipping the Vault audit log to Loki
 - `volumes/grafana/datasources.yml`, `volumes/grafana/dashboards.yml`: Grafana provisioning. Prometheus `timeInterval` is `60s` to match Alloy's Vault scrape interval; bump a data source's `version` when changing it, because Grafana skips the file if its stored version is higher
@@ -156,7 +156,7 @@ Demonstrates Authentik OIDC integration with Vault for multi-namespace authentic
 - **Authentik Worker**: Background task processor
 - **Vault**: OIDC client (configured via Terraform)
 
-**Optional lab:** Authentik is not part of the core stack. Its services live in `labs/authentik/docker-compose.yml` and join the root stack's `docker-vault-stack` network (external). Start the core stack first, then `task authentik:up`.
+**Optional lab:** Authentik is not part of the core stack. Its services live in `labs/authentik/compose.yaml` and join the root stack's `docker-vault-stack` network (external). Start the core stack first, then `task authentik:up`.
 
 **Critical Network Configuration:**
 - Terraform provider uses `http://authentik.localhost:9000` (via Docker network alias)
@@ -213,7 +213,7 @@ The lab requires specific environment variables in `.env`:
 ### `/labs/dex/`
 Demonstrates Dex as a lightweight OIDC provider for Vault (root and admin namespaces).
 
-**Optional lab:** Dex runs as its own compose project (`labs/dex/docker-compose.yml`) on the root stack's `docker-vault-stack` network (external). Storage is in-memory, so the container is stateless. Image tag is set by `DEX_TAG` (default `v2.45.1`, the minimum for groups in `staticPasswords`).
+**Optional lab:** Dex runs as its own compose project (`labs/dex/compose.yaml`) on the root stack's `docker-vault-stack` network (external). Storage is in-memory, so the container is stateless. Image tag is set by `DEX_TAG` (default `v2.45.1`, the minimum for groups in `staticPasswords`).
 
 **Lab Commands:**
 ```bash
@@ -299,7 +299,7 @@ vault kv get -namespace=bu01 team1/app1
 - Task runner: `brew install go-task jq`
 - Terraform CLI
 - Vault CLI
-- Valid Vault Enterprise license (or modify docker-compose.yml for OSS)
+- Valid Vault Enterprise license (or modify `compose.yaml` for OSS)
 
 ### Typical Workflow
 1. `task up` - Start stack
@@ -333,7 +333,7 @@ vault kv get -namespace=bu01 team1/app1
 - The `.env` file contains sensitive tokens - never commit this
 - Default setup uses Vault Enterprise - ensure license compliance
 - All services expose ports locally - not for production use
-- Grafana allows anonymous Admin access with the login form disabled (`GF_AUTH_*` in `docker-compose.yml`); `admin/admin` still works for the API
+- Grafana allows anonymous Admin access with the login form disabled (`GF_AUTH_*` in `compose.yaml`); `admin/admin` still works for the API
 - TLS is disabled by default for easier deployment
 - This is a training environment - production deployments should use TLS
 

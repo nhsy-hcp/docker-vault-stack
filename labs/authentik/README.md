@@ -234,7 +234,7 @@ Run from the project root:
 
 ```bash
 curl -I http://authentik.localhost:9000
-docker compose --env-file ../../.env -f docker-compose.yml config
+docker compose --env-file ../../.env -f compose.yaml config
 task authentik:status
 ```
 

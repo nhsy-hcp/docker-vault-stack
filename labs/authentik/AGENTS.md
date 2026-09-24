@@ -44,7 +44,7 @@ This lab demonstrates HashiCorp Vault integration with Authentik (open-source id
 - Both services are on the same Docker network and can communicate using service names
 
 ### Key Files
-- `docker-compose.yml`: Optional Authentik stack (project `authentik`), attached to the external `docker-vault-stack` network created by the root stack
+- `compose.yaml`: Optional Authentik stack (project `authentik`), attached to the external `docker-vault-stack` network created by the root stack
 - `scripts/setup-admin.sh`: Automated admin setup and token generation
 - `Taskfile.yml`: Task automation (uses parent Taskfile's dotenv)
 - `.env`: Environment configuration (REQUIRED)

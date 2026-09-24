@@ -47,7 +47,7 @@ tasks:
     desc: Start the complete stack
     preconditions:
       - test -f .env
-      - test -f docker-compose.yml
+      - test -f compose.yaml
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up -d --pull=missing
@@ -62,7 +62,7 @@ tasks:
     desc: Start Vault service only
     preconditions:
       - test -f .env
-      - test -f docker-compose.yml
+      - test -f compose.yaml
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up vault -d --pull=missing
@@ -188,7 +188,7 @@ tasks:
     dir: ./tfc-agent
     preconditions:
       - test -f .env
-      - test -f docker-compose.yml
+      - test -f compose.yaml
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose up -d --pull=missing
@@ -197,7 +197,7 @@ tasks:
     dir: ./tfc-agent
     preconditions:
       - test -f .env
-      - test -f docker-compose.yml
+      - test -f compose.yaml
     cmds:
       - |
         {{ .CONTAINER_RUNTIME }} compose stop

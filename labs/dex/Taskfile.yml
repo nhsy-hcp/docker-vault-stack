@@ -5,7 +5,7 @@ vars:
   # Inherits the root Taskfile's CONTAINER_RUNTIME when included; defaults to podman
   CONTAINER_RUNTIME: '{{.CONTAINER_RUNTIME | default "podman"}}'
   # Lab-local compose file; interpolates variables from the root .env
-  COMPOSE: "{{.CONTAINER_RUNTIME}} compose --env-file ../../.env -f docker-compose.yml"
+  COMPOSE: "{{.CONTAINER_RUNTIME}} compose --env-file ../../.env -f compose.yaml"
   NETWORK: docker-vault-stack
 
 tasks:
