@@ -4,7 +4,7 @@ This file provides guidance to AI coding tools when working with code in this re
 
 ## Repository Overview
 
-This is a HashiCorp Vault training environment that provides a complete Docker Compose stack with Vault Enterprise, monitoring tools (Grafana, Prometheus, Loki), and various lab exercises. The repository is structured as a learning platform for Vault features like namespaces, ACL templating, and identity management.
+This is a HashiCorp Vault training environment that provides a Compose stack (Podman by default, Docker supported) with Vault Enterprise, monitoring tools (Grafana, Prometheus, Loki), and various lab exercises. The repository is structured as a learning platform for Vault features like namespaces, ACL templating, and identity management.
 
 ## Architecture
 
@@ -16,8 +16,8 @@ This is a HashiCorp Vault training environment that provides a complete Docker C
 ### Key Configuration Files
 - `docker-compose.yml`: Complete stack definition with Vault Enterprise and monitoring
 - `volumes/vault/raft.hcl`: Vault server configuration with Raft backend (HTTP mode)
-- `volumes/alloy/config.alloy`: Alloy configuration for metrics collection
-- `.env`: Environment variables for VAULT_ADDR, VAULT_LICENSE, VAULT_TOKEN
+- `volumes/alloy/config.alloy`: Alloy configuration for metrics collection and shipping the Vault audit log to Loki
+- `.env`: Environment variables for VAULT_ADDR, VAULT_LICENSE, VAULT_TOKEN (template: `.env.example`)
 - `Taskfile.yml`: Task runner with all operational commands
 
 ## Essential Commands
@@ -30,8 +30,8 @@ task up
 # Initialize Vault (first time only)
 task init
 
-# Initialize Vault without prompt (auto-approve)
-task init --yes
+# Re-initialize without the confirmation prompt (args after -- go to the init script)
+task init -- --yes
 
 # Unseal Vault after restart
 task unseal
@@ -43,11 +43,14 @@ vault status
 # Open UIs in browser and display URLs
 task ui
 
-# Clean shutdown
-task down
+# Configure audit devices and token TTLs (after init/unseal)
+task config
 
-# Complete cleanup (removes volumes)
-task clean
+# Stop containers, keep data
+task stop
+
+# Remove containers and volumes, including Vault data (down and clean are aliases; prompts, --yes skips)
+task down
 ```
 
 ### Available Tasks (Root)
@@ -66,21 +69,24 @@ task --list
 - `authentik:status` - Show Authentik service status
 
 ### Environment Setup
-```bash
-# Required environment file (.env)
-export VAULT_ADDR=http://127.0.0.1:8200
-export VAULT_LICENSE=INSERT_LICENSE_HERE
-export VAULT_TOKEN=<from_vault_init>
+Copy `.env.example` to `.env` and set `VAULT_LICENSE`; `task init` writes `VAULT_TOKEN`. The root Taskfile loads `.env` for every task (including included labs).
 
-# Load environment
+```bash
+# Key variables in .env
+export VAULT_ADDR=http://vault.localhost:8200   # from .env.example
+export VAULT_LICENSE=<license>
+export VAULT_TOKEN=<written by task init>
+
+# Load environment for direct CLI use
 source .env
 ```
 
+`vault-benchmark` (v0.3.0, Go 1.19) cannot resolve `*.localhost` names; run `task benchmark` with `VAULT_ADDR=http://127.0.0.1:8200`.
+
 ### Vault Operations
 ```bash
-# Run performance benchmark (requires vault-benchmark CLI)
-vault namespace create vault-benchmark
-task benchmark
+# Run performance benchmark (requires vault-benchmark CLI; creates the vault-benchmark namespace)
+VAULT_ADDR=http://127.0.0.1:8200 task benchmark
 
 # Access Vault metrics
 task metrics
@@ -94,6 +100,21 @@ task logs
 ```
 
 ## Lab Structure
+
+### Lab Index
+Each tracked lab has its own README with the standard layout (Overview, Prerequisites, Quick Start, Usage, Configuration, Available Tasks, Troubleshooting, Cleanup, References). The root README links the same list.
+
+| Lab | Runs from | README |
+|-----|-----------|--------|
+| ACL Templating | `labs/acl-templating` (terraform) | `labs/acl-templating/README.md` |
+| Audit Logs | `labs/audit-logs` (terraform) | `labs/audit-logs/README.md` |
+| Authentik (optional) | repo root, `task authentik:*` | `labs/authentik/README.md`, `labs/authentik/AGENTS.md` |
+| AWS Secrets Sync | `labs/aws-secrets-sync` (`task`) | `labs/aws-secrets-sync/README.md` |
+| Dex (optional) | repo root, `task dex:*` | `labs/dex/README.md` |
+| Entra ID | `labs/entra-id` (terraform) | `labs/entra-id/README.md` |
+| PKI | repo root, `task pki:*` | `labs/pki/README.md`, `labs/pki/acme-demo.md` |
+
+Other directories under `labs/` are untracked work in progress.
 
 ### `/labs/acl-templating/`
 Demonstrates ACL templating with AppRole authentication across multiple namespaces (bu01, bu02, bu03).
@@ -114,14 +135,6 @@ terraform init && terraform apply
 export ROLE_ID=$(terraform output -json app_role_ids | jq -r '.bu01')
 export SECRET_ID=$(terraform output -json app_secret_ids | jq -r '.bu01')
 ```
-
-### `/labs/namespaces/`
-Demonstrates namespace management, KV secrets engine, and identity groups.
-
-**Key Features:**
-- Nested namespaces (admin/bu0001, admin/bu0002, admin/bu0003, admin/shared)
-- Userpass authentication in admin namespace
-- Identity groups with team-based access policies
 
 ### `/labs/authentik/`
 Demonstrates Authentik OIDC integration with Vault for multi-namespace authentication.
@@ -147,35 +160,19 @@ Demonstrates Authentik OIDC integration with Vault for multi-namespace authentic
 - Vault OIDC uses `http://authentik.localhost:9000` (Docker network alias / service hostname)
 - Both services communicate on `docker-vault-stack` network
 
-**Lab Commands:**
+**Lab Commands (from repo root):**
 ```bash
-# From project root - start the core stack, then Authentik
 task up
+task authentik:all            # up + setup-admin.sh + terraform init + apply
+
+# Step by step
 task authentik:up
+(cd labs/authentik && ./scripts/setup-admin.sh)   # admin user + API token -> .env
+task authentik:init && task authentik:plan && task authentik:apply
 
-# Run complete Authentik setup (automated end-to-end, includes authentik:up)
-task authentik:all
-
-# Step-by-step setup
-cd labs/authentik
-./scripts/setup-admin.sh      # Create admin user and generate API token
-task authentik:init           # Initialize Terraform
-task authentik:plan           # Review planned changes
-task authentik:apply          # Apply Terraform configuration
-
-# Testing and verification
-task authentik:test-auth      # Test OIDC authentication flow
-task authentik:check-policies # Verify token policies
-
-# Service management
-task authentik:status         # Check container status
-task authentik:health         # Health checks
-task authentik:logs           # View all service logs
-task authentik:restart        # Restart Authentik services
-task authentik:redeploy       # Clean slate deployment (removes volumes)
-
-# Cleanup
-task authentik:purge          # Remove Terraform state and disable Vault OIDC auth
+task authentik:test-auth | authentik:check-policies | authentik:status | authentik:health | authentik:logs
+task authentik:redeploy       # clean slate (removes volumes)
+task authentik:purge          # remove Terraform state and disable Vault OIDC auth
 ```
 
 **Environment Requirements:**
@@ -308,7 +305,7 @@ vault kv get -namespace=bu01 team1/app1
 4. `task config` - Enable audit devices and set token TTLs
 5. `source .env` - Load environment
    - `task namespaces` - Create base lab namespaces if the lab needs them
-6. Work in lab directories with `terraform init/plan/apply`
+6. Work on labs: included labs (`authentik`, `dex`, `pki`) run from the root via `task <lab>:*`; the others via `terraform init/plan/apply` (or their own `task`) in the lab directory
 7. `task clean` - Full cleanup when done
 
 ### Debugging

@@ -12,7 +12,7 @@ A Compose stack (Podman by default, Docker supported) for learning HashiCorp Vau
 
 ```bash
 brew install go-task jq podman
-brew tap hashicorp/tap && brew install hashicorp/tap/vault
+brew tap hashicorp/tap && brew install hashicorp/tap/vault hashicorp/tap/terraform
 podman machine init --rootful && podman machine start
 podman --version && podman compose version
 ```
@@ -32,7 +32,7 @@ source .env
 vault status
 ```
 
-After a restart: `task up unseal`. Clean reset: `task clean`, then repeat the steps above.
+After a restart: `task up unseal`. Stop without losing data: `task stop`. Clean reset: `task clean` (removes all volumes including Vault data; prompts, `--yes` skips), then repeat the steps above.
 
 Run `task --list` for all tasks. Frequently used:
 
@@ -42,7 +42,7 @@ Run `task --list` for all tasks. Frequently used:
 | `task backup` | Save a Raft snapshot to `.backups/` (git-ignored) |
 | `task ui` | Open the Vault UI and print service URLs |
 | `task logs` / `task logs-vault` | Follow service logs |
-| `task benchmark` | Run vault-benchmark (requires the `vault-benchmark` CLI) |
+| `task benchmark` | Run vault-benchmark (requires the `vault-benchmark` CLI; run with `VAULT_ADDR=http://127.0.0.1:8200`, it can't resolve `*.localhost`) |
 | `task lint` | Run pre-commit hooks |
 
 ## Services
