@@ -223,6 +223,28 @@ task dex:up | dex:down | dex:restart | dex:status | dex:health | dex:logs
 task dex:plan | dex:apply | dex:destroy
 ```
 
+### `/labs/pki/`
+Demonstrates the PKI secrets engine with two imported intermediate CAs, templated AIA/CRL URLs and ACME, deployed into namespace `admin/tn001`.
+
+**Key Features:**
+- Root + intermediate CAs generated with the `tls` provider and imported via `issuers/import/bundle`
+- Issuer-aware AIA/CRL/OCSP URL templating via `config/cluster`
+- ACME with External Account Binding required; certbot demo on the `docker-vault-stack` network
+- Roles `default`, `v1`, `v2` (v2 is the stricter role), auto-tidy, audit non-HMAC keys
+
+**Namespace gotcha:** the namespace is set once in `labs/pki/Taskfile.yml` (exported as `VAULT_NAMESPACE` and `TF_VAR_vault_namespace`). Resource `namespace` is relative to the provider namespace, so Terraform must run with `VAULT_NAMESPACE` unset - use the `tf:*` tasks.
+
+**Lab Commands:**
+```bash
+cd labs/pki
+task tf:init && task tf:apply
+task test                       # smoke tests
+task default-cert | v1-cert | v2-cert | sign | crl | health-check
+task acme:init acme:web acme:certbot && task acme:down
+```
+
+See `labs/pki/README.md` and `labs/pki/acme-demo.md`.
+
 ## Working with Labs
 
 ### Terraform Patterns

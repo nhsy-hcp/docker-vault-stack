@@ -1,0 +1,10 @@
+# Generated certificates, keys and CSRs
+certs/*.pem
+private.key
+*.key
+*.csr
+*.crt
+
+# Local certbot state and ACME webroot
+acme/etc/
+acme/web/

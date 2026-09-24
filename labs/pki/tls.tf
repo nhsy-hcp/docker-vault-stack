@@ -100,35 +100,29 @@ resource "tls_locally_signed_cert" "intermediate_v2" {
   ]
 }
 
-resource "null_resource" "root_ca" {
-  triggers = {
-    always_run = md5(tls_self_signed_cert.root_ca.cert_pem)
-  }
+resource "terraform_data" "root_ca" {
+  triggers_replace = [md5(tls_self_signed_cert.root_ca.cert_pem)]
 
   provisioner "local-exec" {
     command = "echo '${tls_self_signed_cert.root_ca.cert_pem}' | openssl x509 -noout -text"
   }
 }
 
-resource "null_resource" "intermediate_v1" {
-  triggers = {
-    always_run = md5(tls_locally_signed_cert.intermediate_v1.cert_pem)
-  }
+resource "terraform_data" "intermediate_v1" {
+  triggers_replace = [md5(tls_locally_signed_cert.intermediate_v1.cert_pem)]
 
   provisioner "local-exec" {
     command = "echo '${tls_locally_signed_cert.intermediate_v1.cert_pem}' | openssl x509 -noout -text"
   }
-  depends_on = [null_resource.root_ca]
+  depends_on = [terraform_data.root_ca]
 }
 
-resource "null_resource" "intermediate_v2" {
-  triggers = {
-    always_run = md5(tls_locally_signed_cert.intermediate_v2.cert_pem)
-  }
+resource "terraform_data" "intermediate_v2" {
+  triggers_replace = [md5(tls_locally_signed_cert.intermediate_v2.cert_pem)]
   provisioner "local-exec" {
     command = "echo '${tls_locally_signed_cert.intermediate_v2.cert_pem}' | openssl x509 -noout -text"
   }
-  depends_on = [null_resource.intermediate_v1]
+  depends_on = [terraform_data.intermediate_v1]
 }
 
 # resource "local_sensitive_file" "root_ca_key" {

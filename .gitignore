@@ -59,3 +59,7 @@ terraform.rc
 .bob/
 .plans/
 .tmp/
+
+# labs
+**/.azure
+**/notes.txt

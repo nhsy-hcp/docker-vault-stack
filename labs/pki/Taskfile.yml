@@ -1,72 +1,178 @@
 # https://taskfile.dev
 
 version: '3'
+
+dotenv: [../../.env]
+
+vars:
+  NAMESPACE: admin/tn001
+  TMP_DIR: .tmp
+  # Terraform scopes resources with var.vault_namespace, relative to the provider
+  # namespace, so VAULT_NAMESPACE must be unset or it would nest twice.
+  TF: env -u VAULT_NAMESPACE terraform
+
+env:
+  VAULT_NAMESPACE: "{{.NAMESPACE}}"
+  TF_VAR_vault_namespace: "{{.NAMESPACE}}"
+
 tasks:
+  default:
+    desc: Show available PKI tasks
+    cmd: task --list
+
+  tf:init:
+    desc: Initialize Terraform providers
+    cmds:
+      - "{{.TF}} init -upgrade"
+
+  tf:plan:
+    desc: Plan PKI Terraform changes in namespace {{.NAMESPACE}}
+    cmds:
+      - "{{.TF}} plan {{.CLI_ARGS}}"
+
+  tf:apply:
+    desc: Apply PKI Terraform configuration in namespace {{.NAMESPACE}}
+    cmds:
+      - "{{.TF}} apply {{.CLI_ARGS}}"
+
+  test:
+    desc: Run PKI lab smoke tests (issuance, chains, role limits, CRL, ACME)
+    cmds:
+      - ./scripts/test.sh
 
   default-cert:
+    desc: Issue a certificate from the default PKI role and print details
     cmds:
       - |
          vault write -f -field=certificate pki/issue/default common_name=test.example.com | openssl x509 -text -noout
 
   v1-cert:
+    desc: Issue a certificate from issuer role v1 and print details
     cmds:
       - |
          vault write -f -field=certificate pki/issue/v1 common_name=test.example.com | openssl x509 -text -noout
 
   v2-cert:
+    desc: Issue a certificate from issuer role v2 and print details
     cmds:
       - |
          vault write -f -field=certificate pki/issue/v2 common_name=test.example.com | openssl x509 -text -noout
 
-  crl:
+  sign:
+    desc: Generate CSR, sign via PKI sign endpoint, and save artifacts to TMP_DIR (CN, ROLE overridable)
+    vars:
+      CN: '{{.CN | default "test.example.com"}}'
+      ROLE: '{{.ROLE | default "default"}}'
     cmds:
-      - curl -sk https://127.0.0.1:8200/v1/pki/crl | openssl crl -text -noout
+      - mkdir -p {{.TMP_DIR}}
+      - |
+        openssl req -new -newkey rsa:4096 -nodes \
+          -keyout "{{.TMP_DIR}}/{{.CN}}.key" \
+          -out "{{.TMP_DIR}}/{{.CN}}.csr" \
+          -subj "/CN={{.CN}}"
+      - vault write -field=certificate pki/sign/{{.ROLE}} csr=@"{{.TMP_DIR}}/{{.CN}}.csr" > "{{.TMP_DIR}}/{{.CN}}.crt"
+      - echo "Saved certificate to {{.TMP_DIR}}/{{.CN}}.crt"
+      - openssl x509 -in "{{.TMP_DIR}}/{{.CN}}.crt" -text -noout
+
+  crl:
+    desc: Fetch and decode the PKI certificate revocation list
+    cmds:
+      - curl -sf "$VAULT_ADDR/v1/$VAULT_NAMESPACE/pki/crl/pem" | openssl crl -text -noout
 
   certs:
+    desc: List issued certificate serials
     cmds:
       - vault list pki/certs
 
   certs-list:
+    desc: List issued certificates with key metadata
     cmds:
       - vault list -format=json pki/certs | jq -r .[] | xargs -I {} sh -c 'echo "=== Certificate {} ==="; vault read pki/cert/{} | grep -E "serial_number|common_name|issuing_ca|expiration_time|revocation_time"'
 
   certs-count:
+    desc: Count issued certificates
     cmds:
       - vault list -format=json pki/certs | jq length
 
   certs-detailed:
+    desc: Show full decoded details for each issued certificate
     cmds:
       - vault list -format=json pki/certs | jq -r .[] | xargs -I {} sh -c 'vault read -field=certificate pki/cert/{} | openssl x509 -text -noout'
 
   issuers:
+    desc: List configured PKI issuers
     cmds:
       - vault list pki/issuers
 
   issuers-detailed:
+    desc: Show full details for each PKI issuer
     cmds:
       - vault list -format=json pki/issuers | jq -r .[] | xargs -I {} sh -c 'echo "=== Issuer {} ==="; vault read pki/issuer/{}'
 
   leases:
+    desc: Inspect active leases for issued certificates across roles
     cmds:
       - vault list -format=json sys/leases/lookup/pki/issue/default | jq -r .[] | xargs -I {} vault lease lookup pki/issue/default/{}
       - vault list -format=json sys/leases/lookup/pki/issue/v1 | jq -r .[] | xargs -I {} vault lease lookup pki/issue/v1/{}
       - vault list -format=json sys/leases/lookup/pki/issue/v2 | jq -r .[] | xargs -I {} vault lease lookup pki/issue/v2/{}
 
   health-check:
+    desc: Run Vault PKI health check
     cmds:
-      - vault pki health-check pki
+      # exit code 2/3 = critical/warning findings; only fail on errors (>3) or ok
+      - vault pki health-check pki || test $? -le 3
 
   tidy-now:
+    desc: Run PKI tidy operation immediately
     cmds:
       - vault write pki/tidy tidy_cert_store=true tidy_revoked_certs=true safety_buffer=1h
 
   tidy-status:
+    desc: Read status of the latest PKI tidy operation
     cmds:
       - vault read pki/tidy-status
 
   pki-clean:
+    desc: Destroy PKI resources and clean related Terraform state
     cmds:
-      - terraform destroy -target 'vault_mount.pki' -auto-approve
+      - "{{.TF}} destroy -target 'vault_mount.pki' -auto-approve"
       - vault secrets disable pki || true
-      - terraform state rm 'vault_pki_secret_backend_issuer.intermediate_v1' || true
-      - terraform state rm 'vault_pki_secret_backend_issuer.intermediate_v2' || true
+      - for: [vault_generic_endpoint.intermediate_v1, vault_generic_endpoint.intermediate_v2, vault_pki_secret_backend_issuer.intermediate_v1, vault_pki_secret_backend_issuer.intermediate_v2]
+        cmd: "{{.TF}} state rm '{{.ITEM}}' || true"
+
+  acme:init:
+    desc: Initialize local ACME directories and entrypoint permissions
+    cmds:
+      - mkdir -p acme/etc acme/web
+      - chmod +x acme/certbot-entrypoint.sh scripts/*.sh
+
+  acme:web:
+    desc: Start ACME challenge web server container
+    cmds:
+      - |
+         docker run --rm -d \
+           --name acme-web \
+           --network docker-vault-stack \
+           --network-alias acme-demo.example.com \
+           -v "$PWD/acme/web:/usr/share/nginx/html" \
+           nginx:alpine
+
+  acme:certbot:
+    desc: Request a certificate from the Vault ACME endpoint with certbot (4096-bit key)
+    cmds:
+      - ./scripts/acme-certbot.sh 4096
+
+  acme:certbot-fail:
+    desc: Request an ACME certificate with a 2048-bit key (rejected by the role)
+    cmds:
+      - ./scripts/acme-certbot.sh 2048
+
+  acme:down:
+    desc: Stop and remove ACME demo containers
+    cmds:
+      - docker rm -f acme-web acme-certbot 2>/dev/null || true
+
+  acme:certbot:clean:
+    desc: Remove local certbot state under acme/etc
+    cmds:
+      - rm -rf acme/etc

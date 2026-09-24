@@ -24,7 +24,7 @@ Located in `/labs/` with specific Vault feature demonstrations:
 - **Cross-Namespace Secrets** - Secret sharing across namespaces
 - **Entra ID Integration** - Azure AD authentication and identity management
 - **Namespace Management** - Multi-tenant isolation and access control
-- **PKI Operations** - Public Key Infrastructure management
+- **PKI Operations** - PKI with imported intermediate CAs, issuer rotation and ACME (namespace `admin/tn001`)
 
 ## Prerequisites
 
