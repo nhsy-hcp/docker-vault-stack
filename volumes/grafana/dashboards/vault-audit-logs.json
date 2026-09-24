@@ -345,15 +345,19 @@
       },
       "options": {
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
-      }
+      },
+      "description": "Audit responses per interval, stacked by operation."
     },
     {
       "id": 6,
@@ -403,15 +407,19 @@
       },
       "options": {
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "calcs": [
+            "sum"
+          ]
         },
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
         }
-      }
+      },
+      "description": "Audit responses with a non-empty error field per interval."
     },
     {
       "id": 7,
@@ -497,7 +505,8 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "Ten most requested paths in the selected range (audit responses, filtered by the variables above)."
     },
     {
       "id": 8,
@@ -583,7 +592,8 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "Ten identities (auth display name) with the most requests in the selected range."
     },
     {
       "id": 9,
@@ -669,7 +679,8 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "Requests per namespace in the selected range (top ten)."
     },
     {
       "id": 10,
@@ -755,7 +766,8 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "Requests per mount type (kv, pki, token, ...) in the selected range (top ten)."
     },
     {
       "id": 11,
@@ -841,7 +853,8 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "Ten client IP addresses with the most requests in the selected range."
     },
     {
       "id": 12,
@@ -876,7 +889,8 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "dedupStrategy": "none"
-      }
+      },
+      "description": "Audit responses with a non-empty error field."
     },
     {
       "id": 13,
@@ -911,7 +925,8 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "dedupStrategy": "none"
-      }
+      },
+      "description": "Raw audit responses matching the variables above; expand a line for the full JSON."
     }
   ],
   "templating": {

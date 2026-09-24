@@ -40,6 +40,437 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
+      "description": "Voters and non-voters in the Raft configuration.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(vault_raft_peers{job=~\"$job\",cluster=~\"$cluster\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Raft peers",
+      "type": "stat",
+      "id": 39
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Voter nodes that can fail before losing quorum (autopilot).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(vault_autopilot_failure_tolerance{job=~\"$job\",cluster=~\"$cluster\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Failure tolerance",
+      "type": "stat",
+      "id": 40
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Overall cluster health from autopilot.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "Unhealthy"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "Healthy"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "min(vault_autopilot_healthy{job=~\"$job\",cluster=~\"$cluster\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Autopilot",
+      "type": "stat",
+      "id": 41
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "99th percentile time to commit a Raft log entry on the leader.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 250
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "max(vault_raft_commitTime{job=~\"$job\",cluster=~\"$cluster\",quantile=\"0.99\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Commit time p99",
+      "type": "stat",
+      "id": 42
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "BoltDB pages allocated for the FSM (vault.db).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(vault_raft_storage_bolt_page_bytes_allocated{job=~\"$job\",cluster=~\"$cluster\",instance=~\"$instance\",database=\"fsm\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "title": "FSM size",
+      "type": "stat",
+      "id": 43
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "BoltDB pages allocated for the Raft log store (raft.db).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(vault_raft_storage_bolt_page_bytes_allocated{job=~\"$job\",cluster=~\"$cluster\",instance=~\"$instance\",database=\"logstore\"})",
+          "legendFormat": "__auto",
+          "range": true,
+          "instant": false,
+          "refId": "A"
+        }
+      ],
+      "title": "Log store size",
+      "type": "stat",
+      "id": 44
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "panels": [],
+      "title": "Cache",
+      "type": "row",
+      "id": 45
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
       "description": "Activity of Least Recently Used (LRU) cache in front of storage backend.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).",
       "fieldConfig": {
         "defaults": {
@@ -54,21 +485,21 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -96,7 +527,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 1
+        "y": 5
       },
       "id": 38,
       "options": {
@@ -176,6 +607,19 @@
       "type": "timeseries"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "panels": [],
+      "title": "Log Replication & Commits",
+      "type": "row",
+      "id": 46
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -194,21 +638,21 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -236,7 +680,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 9
+        "y": 14
       },
       "id": 37,
       "options": {
@@ -244,7 +688,7 @@
           "calcs": [
             "mean"
           ],
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -289,22 +733,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -332,13 +776,16 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 9
+        "y": 14
       },
       "id": 35,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -370,7 +817,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Commits to the raft log on the leader node.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).",
+      "description": "Commits to the raft log on the leader node.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).<br/>\n\nReported by the active (leader) node only.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -384,21 +831,21 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -426,7 +873,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 17
+        "y": 22
       },
       "id": 21,
       "options": {
@@ -434,7 +881,7 @@
           "calcs": [
             "mean"
           ],
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -458,7 +905,7 @@
           "refId": "A"
         }
       ],
-      "title": "^ Raft Commit (Rate)",
+      "title": "Raft Commit (Rate)",
       "type": "timeseries"
     },
     {
@@ -466,7 +913,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Time required to commit a new entry to the raft log on the leader node.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).",
+      "description": "Time required to commit a new entry to the raft log on the leader node.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).<br/>\n\nReported by the active (leader) node only.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -479,22 +926,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -522,13 +969,16 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 17
+        "y": 22
       },
       "id": 24,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -552,7 +1002,7 @@
           "refId": "A"
         }
       ],
-      "title": "^ Raft Commit (Duration)",
+      "title": "Raft Commit (Duration)",
       "type": "timeseries"
     },
     {
@@ -560,7 +1010,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Activity of transactions operations.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).",
+      "description": "Activity of transactions operations.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).<br/>\n\nReported by the active (leader) node only.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -574,21 +1024,21 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -616,7 +1066,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 30
       },
       "id": 23,
       "options": {
@@ -624,7 +1074,7 @@
           "calcs": [
             "mean"
           ],
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -648,7 +1098,7 @@
           "refId": "A"
         }
       ],
-      "title": "^ Raft Transaction (Rate)",
+      "title": "Raft Transaction (Rate)",
       "type": "timeseries"
     },
     {
@@ -656,7 +1106,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Time required to insert raft operations into a single log.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).",
+      "description": "Time required to insert raft operations into a single log.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).<br/>\n\nReported by the active (leader) node only.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -669,22 +1119,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -712,13 +1162,16 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 30
       },
       "id": 26,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -742,15 +1195,28 @@
           "refId": "A"
         }
       ],
-      "title": "^ Raft Transaction (Duration)",
+      "title": "Raft Transaction (Duration)",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "panels": [],
+      "title": "Storage Operations",
+      "type": "row",
+      "id": 47
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Time required to insert a log entry to the persist path.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).",
+      "description": "Time required to insert a log entry to the persist path.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).<br/>\n\nReported by the active (leader) node only.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -763,22 +1229,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -806,7 +1272,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 33
+        "y": 39
       },
       "id": 27,
       "options": {
@@ -836,7 +1302,7 @@
           "refId": "PUT"
         }
       ],
-      "title": "^ Raft PUT (Duration)",
+      "title": "Raft PUT (Duration)",
       "type": "timeseries"
     },
     {
@@ -844,7 +1310,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Time required to insert log entry to delete path.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).",
+      "description": "Time required to insert log entry to delete path.<br/>\n\nIMPORTANT: Panel will reflect instance variable value(s).<br/>\n\nReported by the active (leader) node only.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -857,22 +1323,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -900,7 +1366,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 33
+        "y": 39
       },
       "id": 30,
       "options": {
@@ -930,7 +1396,7 @@
           "refId": "DELETE"
         }
       ],
-      "title": "^ Raft DELETE (Duration)",
+      "title": "Raft DELETE (Duration)",
       "type": "timeseries"
     },
     {
@@ -951,22 +1417,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -994,7 +1460,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 33
+        "y": 39
       },
       "id": 28,
       "options": {
@@ -1045,22 +1511,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1088,7 +1554,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 33
+        "y": 39
       },
       "id": 29,
       "options": {
@@ -1122,11 +1588,24 @@
       "type": "timeseries"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "panels": [],
+      "title": "Finite State Machine",
+      "type": "row",
+      "id": 48
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Time required to queue up a batch of logs for the finite state machine to apply.",
+      "description": "Time required to queue up a batch of logs for the finite state machine to apply.<br/>\n\nReported by the active (leader) node only.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1139,22 +1618,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1182,7 +1661,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 41
+        "y": 48
       },
       "id": 32,
       "options": {
@@ -1212,7 +1691,7 @@
           "refId": "A"
         }
       ],
-      "title": "^ FSM Enqueue (Duration)",
+      "title": "FSM Enqueue (Duration)",
       "type": "timeseries"
     },
     {
@@ -1233,22 +1712,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1276,7 +1755,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 41
+        "y": 48
       },
       "id": 31,
       "options": {
@@ -1327,22 +1806,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1370,7 +1849,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 41
+        "y": 48
       },
       "id": 19,
       "options": {
@@ -1421,22 +1900,22 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 20,
-            "gradientMode": "none",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -1464,7 +1943,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 41
+        "y": 48
       },
       "id": 33,
       "options": {

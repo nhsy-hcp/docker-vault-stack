@@ -6,6 +6,8 @@ plugin_directory  = "/vault/plugins"
 
 api_addr          = "http://vault:8200"
 cluster_addr      = "http://vault:8201"
+# Must match the cluster label Alloy sets (volumes/alloy/config.alloy) so sealed/unsealed series never diverge
+cluster_name      = "vault-cluster"
 
 storage "raft" {
   path = "/vault/file"

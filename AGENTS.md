@@ -15,10 +15,10 @@ This is a HashiCorp Vault training environment that provides a Compose stack (Po
 
 ### Key Configuration Files
 - `compose.yaml`: Complete stack definition with Vault Enterprise and monitoring
-- `volumes/vault/raft.hcl`: Vault server configuration with Raft backend (HTTP mode)
-- `volumes/alloy/config.alloy`: Alloy configuration for metrics collection and shipping the Vault audit log to Loki
+- `volumes/vault/raft.hcl`: Vault server configuration with Raft backend (HTTP mode). `cluster_name` (`vault-cluster`) must match the `cluster` label Alloy sets, otherwise series Vault labels itself (e.g. the pre-unseal `vault_core_unsealed` gauge, kept for 24h) collide with the relabelled ones
+- `volumes/alloy/config.alloy`: Alloy configuration for metrics collection and shipping the Vault audit log to Loki. The `prometheus.relabel "vault"` rule sets `cluster="vault-cluster"` on every Vault metric, because most (Go runtime, summaries) have no cluster label
 - `volumes/grafana/datasources.yml`, `volumes/grafana/dashboards.yml`: Grafana provisioning. Prometheus `timeInterval` is `60s` to match Alloy's Vault scrape interval; bump a data source's `version` when changing it, because Grafana skips the file if its stored version is higher
-- `volumes/grafana/dashboards/*.json`: provisioned dashboards. Keep tags as `["vault", <area>, <datasource>]` and the shared `Vault dashboards` link (a dropdown of all dashboards tagged `vault`)
+- `volumes/grafana/dashboards/*.json`: provisioned dashboards. Keep tags as `["vault", <area>, <datasource>]` and the shared `Vault dashboards` link (a dropdown of all dashboards tagged `vault`). Prometheus dashboards open with a strip of summary stat tiles; timeseries use smooth lines with multi tooltips, and latency panels are lines, not bars. Put "active node only" notes in the panel description, not as `^`/`*` title prefixes
 - `.env`: Environment variables for VAULT_ADDR, VAULT_LICENSE, VAULT_TOKEN (template: `.env.example`)
 - `Taskfile.yml`: Task runner with all operational commands
 

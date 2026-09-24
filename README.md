@@ -70,7 +70,7 @@ Grafana loads these from `volumes/grafana/dashboards/`. Switch between them with
 | Vault / Tokens | Prometheus | Token creation, counts and TTLs by namespace and auth method |
 | Vault / Audit Logs | Loki | Audit requests, errors, top paths and identities (needs `task config`) |
 
-Replication, HA standby and snapshot panels stay empty on this single-node stack. After editing a dashboard's JSON, run `task grafana-reload`.
+The Prometheus dashboards open with a row of summary tiles (active node, Raft peers, license days left, ...). Replication, HA standby and snapshot panels stay empty on this single-node stack. After editing a dashboard's JSON, run `task grafana-reload`.
 
 ## Labs
 

@@ -55,6 +55,9 @@ prometheus.scrape "vault" {
   forward_to = [prometheus.relabel.vault.receiver]
 }
 
+// Not every Vault metric carries a cluster label, so set one on all of them.
+// Matches cluster_name in raft.hcl, so series Vault labels itself (including
+// pre-unseal gauges) never collide under different names.
 prometheus.relabel "vault" {
   forward_to = [prometheus.remote_write.default.receiver]
   rule {
