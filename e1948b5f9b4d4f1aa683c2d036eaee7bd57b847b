@@ -1,0 +1,5 @@
+{"id":"ba515f3e-b528-47bc-8ea6-a4751304d591","ts":"2026-04-28T11:26:00.719Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/docker-compose.yml","version":"1.0.0","taskID":"47208fc0-fc01-4bbf-8d3d-b30b76d4d9d7"}
+{"id":"96832a1e-f378-4da6-b74d-b90bfd91bfdc","ts":"2026-04-28T11:27:00.279Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/docker-compose.yml","version":"1.0.0","taskID":"47208fc0-fc01-4bbf-8d3d-b30b76d4d9d7"}
+{"id":"bb568f07-2c6d-48f7-b174-820341e50e55","ts":"2026-04-28T11:59:56.912Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/labs/authentik/Taskfile.yml","version":"1.0.0","taskID":"c3f66f94-bad1-4c4d-925c-4869b431cf05"}
+{"id":"1ee28f8c-8829-4799-97c3-c3ad2f1b1fdd","ts":"2026-04-28T12:20:23.822Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/labs/authentik/scripts/setup-admin.sh","version":"1.0.0","taskID":"c3f66f94-bad1-4c4d-925c-4869b431cf05"}
+{"id":"4af61161-974f-4e00-935d-c51131098033","ts":"2026-05-18T10:48:29.207Z","path":"/Users/narish.samplay/Projects/training/docker-vault-stack/Taskfile.yml","version":"1.0.0","taskID":"b85b159e-142d-4133-baa5-71f6d9bb9ab7"}
