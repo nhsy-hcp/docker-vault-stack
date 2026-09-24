@@ -2,198 +2,74 @@
 
 A Docker Compose stack for learning HashiCorp Vault Enterprise features with integrated monitoring and hands-on lab exercises.
 
-## Architecture & Components
+## Components
 
-This environment provides:
-
-### Core Stack
-- **Vault Enterprise** - Main service with Raft storage backend and audit logging
-- **Monitoring Stack** - Complete observability suite:
-  - **Grafana** - Dashboards and visualization
-  - **Prometheus** - Metrics collection and alerting
-  - **Loki** - Log aggregation
-  - **Alloy** - Metrics collection
-
-### Training Labs
-Located in `/labs/` with specific Vault feature demonstrations:
-- **ACL Templating** - AppRole & Userpass authentication with dynamic policies
-- **Authentik OIDC Integration** (optional lab) - Open-source identity provider with OIDC authentication
-- **Dex OIDC Integration** (optional lab) - Lightweight OIDC provider with static users and groups
-- **AWS Authentication** - IAM role-based authentication
-- **Certificate Authentication** - TLS client certificate authentication
-- **Cross-Namespace Secrets** - Secret sharing across namespaces
-- **Entra ID Integration** - Azure AD authentication and identity management
-- **Namespace Management** - Multi-tenant isolation and access control
-- **PKI Operations** - PKI with imported intermediate CAs, issuer rotation and ACME (namespace `admin/tn001`)
+- **Vault Enterprise** - Raft storage backend and audit logging
+- **Monitoring** - Grafana (dashboards), Prometheus (metrics), Loki (logs), Alloy (collection)
+- **Labs** - Self-contained exercises in [`labs/`](labs/), each with its own README
 
 ## Prerequisites
 
-**Required Tools:**
 ```bash
-# Install task runner and jq
 brew install go-task jq
-
-# Install Vault CLI
-brew tap hashicorp/tap
-brew install hashicorp/tap/vault
-
-# Ensure you have Docker and Docker Compose
-docker --version
-docker compose version
+brew tap hashicorp/tap && brew install hashicorp/tap/vault
+docker --version && docker compose version
 ```
 
-**Clone Repository:**
-```bash
-git clone https://github.com/nhsy-hcp/docker-vault-stack.git
-cd docker-vault-stack
-```
-
-**Environment Configuration:**
-Copy `.env.example` to `.env` and configure:
-1. Add your Vault Enterprise license to `VAULT_LICENSE`
-2. `VAULT_ADDR` is pre-configured as `http://vault.localhost:8200`
+Copy `.env.example` to `.env` and set `VAULT_LICENSE`. `VAULT_TOKEN` is written by `task init`; do not edit it manually. The `.env` file is the source of environment configuration for all scripts and tasks.
 
 ## Quick Start
 
-### Initial Setup
 ```bash
-# 1. Start the complete stack
-task up
-
-# 2. Initialize Vault (first time only)
-task init
-
-# 3. Unseal Vault
-task unseal
-
-# 4. Config Vault
-task config
-
-# 5. Load environment variables
+task up          # start the stack
+task init        # initialize Vault (first time only)
+task unseal      # unseal Vault
+task config      # audit devices and token TTLs
 source .env
-
-# 6. Verify setup
 vault status
-vault token lookup
 ```
 
-### Accessing Services
-- **Vault UI**: http://vault.localhost:8200
-- **Authentik UI**: http://authentik.localhost:9000 (optional; start with `task authentik:up`)
-- **Dex**: http://dex.localhost:5556 (optional; start with `task dex:up`)
-- **Alloy**: http://alloy.localhost:12345
-- **Grafana**: http://grafana.localhost:3000
-- **Prometheus**: http://prometheus.localhost:9090
-- **Loki**: http://loki.localhost:3100
+After a restart: `task up unseal`. Clean reset: `task clean`, then repeat the steps above.
 
-### Daily Usage
-After initial setup, restart with:
-```bash
-task up unseal
-source .env
-vault token lookup
-```
+Run `task --list` for all tasks. Frequently used:
 
-## Environment Variables
+| Task | Description |
+|------|-------------|
+| `task namespaces` | Create base lab namespaces `admin` and `admin/tn001` (idempotent, not run by default) |
+| `task backup` | Save a Raft snapshot to `.backups/` (git-ignored) |
+| `task ui` | Open the Vault UI and print service URLs |
+| `task logs` / `task logs-vault` | Follow service logs |
+| `task benchmark` | Run vault-benchmark (requires the `vault-benchmark` CLI) |
+| `task lint` | Run pre-commit hooks |
 
-The `.env` file is the authoritative source for environment configuration. All scripts and Taskfile tasks source values from this file.
+## Services
 
-**Required Variables:**
-- `VAULT_ADDR` - Vault server address (default: `http://vault.localhost:8200`)
-- `VAULT_TOKEN` - Root token (auto-populated by `task init` do not edit manually)
-- `VAULT_LICENSE` - Vault Enterprise license key
+| Service | URL |
+|---------|-----|
+| Vault | http://vault.localhost:8200 |
+| Grafana | http://grafana.localhost:3000 |
+| Prometheus | http://prometheus.localhost:9090 |
+| Loki | http://loki.localhost:3100 |
+| Alloy | http://alloy.localhost:12345 |
 
-**Note:** Scripts will fail with clear error messages if `.env` is missing or `VAULT_ADDR` is not set.
+## Labs
 
-## Available Tasks
-
-The `Taskfile.yml` provides the following automation commands:
-
-### Stack Management
-- `task up` - Start complete Docker Compose stack
-- `task vault-up` - Start only Vault service
-- `task down` - Stop all services
-- `task stop` - Stop services (alias for down)
-- `task restart` - Restart Vault service
-- `task clean` - Remove containers and volumes completely
-
-### Vault Operations
-- `task init` - Initialize Vault (first time setup)
-- `task unseal` - Unseal Vault after restart
-- `task status` - Check Vault status
-- `task backup` - Create Raft snapshot backup
-- `task shell` - Access Vault container shell
-
-### Monitoring & Metrics
-- `task metrics` - Fetch Vault metrics endpoint
-- `task logs` - Follow logs for all services
-- `task logs-vault` - Follow Vault-specific logs
-
-### Development & Testing
-- `task benchmark` - Run vault-benchmark performance tests
-- `task dev` - Start Vault in development mode
-- `task ui` - Open Vault UI in browser
-- `task config` - Run Vault configuration scripts
-- `task token` - Copy Vault token to clipboard (macOS only)
-
-## Performance Testing
-
-Run benchmarks to test Vault performance and generate metrics:
-```bash
-# Execute performance tests (requires vault-benchmark CLI)
-task benchmark
-```
-
-
-
-
-## Troubleshooting
-### Clean Reset
-```bash
-# Complete cleanup and restart
-task clean
-task up
-task init
-task unseal
-task config
-source .env
-```
-
-## Development
-
-### File Structure
-```
-├── docker-compose.yml          # Complete stack definition
-├── Taskfile.yml               # Automation commands
-├── volumes/                   # Persistent data
-│   ├── vault/                # Vault configuration & data
-│   ├── alloy/                # Metrics / logs collection
-│   ├── grafana/              # Grafana dashboards
-│   ├── loki/                 # Loki logs
-│   └── prometheus/           # Prometheus configuration
-├── labs/                     # Training exercises
-│   ├── acl-templating/       # Advanced ACL patterns
-│   ├── authentik/           # Authentik OIDC integration
-│   ├── aws-auth/            # Cloud authentication
-│   ├── cert-auth/           # Certificate authentication
-│   ├── cross-namespace-secrets/ # Multi-tenant secrets
-│   ├── dex/                 # Dex OIDC integration (optional)
-│   ├── entra-id/            # Azure AD integration
-│   ├── namespaces/          # Multi-tenancy basics
-│   └── pki/                 # PKI operations
-└── scripts/                 # Initialization scripts
-```
+| Lab | Description |
+|-----|-------------|
+| [ACL Templating](labs/acl-templating/README.md) | AppRole authentication with templated policies across namespaces |
+| [Audit Logs](labs/audit-logs/README.md) | Audit log filtering |
+| [Authentik](labs/authentik/README.md) | Authentik OIDC provider (optional lab, `task authentik:*`) |
+| [AWS Secrets Sync](labs/aws-secrets-sync/README.md) | Sync secrets to AWS Secrets Manager |
+| [Dex](labs/dex/README.md) | Dex OIDC provider (optional lab, `task dex:*`) |
+| [Entra ID](labs/entra-id/README.md) | Azure Entra ID authentication |
+| [PKI](labs/pki/README.md) | PKI with imported intermediate CAs and ACME (`task pki:*`) |
 
 ## Security Considerations
 
-- **Development Use Only**: This stack exposes services on localhost - not for production
-- **HTTP Only**: TLS is disabled for easier deployment - production deployments should use TLS
-- **License Compliance**: Ensure Vault Enterprise license compliance
-- **Secrets Management**: Never commit `.env` or `vault-init.json` files
+- Training and development use only: services are exposed on localhost over HTTP (no TLS)
+- Ensure Vault Enterprise license compliance
+- Never commit `.env`, `vault-init.json` or snapshots in `.backups/`
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-*Note: This project is intended for training and development environments.*

@@ -1,28 +1,37 @@
 # Audit Log Filtering Lab
 
+This lab demonstrates HashiCorp Vault's audit log filtering capabilities. Audit log filters allow you to reduce audit log volume by selectively capturing events based on specific criteria, such as namespace, mount or operation.
+
+> **Namespace:** filters on `vault-benchmark` (must already exist).
+
 ## Overview
-
-This lab demonstrates HashiCorp Vault's audit log filtering capabilities. Audit log filters allow you to reduce audit log volume by selectively capturing events based on specific criteria, such as namespace, authentication method, or other request attributes.
-
-## What This Lab Demonstrates
 
 The lab creates two file-based audit devices to illustrate the difference between filtered and unfiltered audit logging:
 
-1. **Standard Audit Device** (`vault_benchmark`): Captures all audit events across the entire Vault instance
-2. **Filtered Audit Device** (`vault_benchmark_filter`): Only captures audit events from the `vault-benchmark` namespace
+- **Standard Audit Device** (`vault_benchmark`): Captures all audit events across the entire Vault instance
+- **Filtered Audit Device** (`vault_benchmark_filter`): Only captures audit events from the `vault-benchmark` namespace
 
 This comparison helps visualize how audit filters can significantly reduce log volume in multi-tenant environments while maintaining compliance for specific workspaces.
 
+### Use Cases
+
+Audit log filtering is valuable for:
+
+- **Multi-tenant environments**: Reduce log volume by filtering to specific namespaces
+- **Compliance requirements**: Capture only events relevant to specific workloads or data classifications
+- **Cost optimization**: Reduce storage and log processing costs in high-volume environments
+- **Performance**: Lower I/O overhead by writing fewer audit entries
+- **Security focus**: Concentrate audit analysis on sensitive namespaces or operations
+
 ## Prerequisites
 
-- Vault stack running and unsealed (see root `README.md`)
+- Core stack running and unsealed (see the [root README](../../README.md))
 - Terraform CLI installed
 - Vault CLI configured with appropriate credentials
+- `jq` installed (used for log analysis)
 - `vault-benchmark` namespace created (`vault namespace create vault-benchmark`)
 
-## Lab Setup
-
-### 1. Deploy Audit Devices
+## Quick Start
 
 ```bash
 cd labs/audit-logs
@@ -31,24 +40,26 @@ terraform apply
 ```
 
 This creates:
+
 - Standard audit device writing to `/vault/logs/audit_vault_benchmark.log`
 - Filtered audit device writing to `/vault/logs/audit_vault_benchmark_filter.log` (namespace-filtered)
 
-### 2. Verify Audit Devices
+## Usage
+
+### Verify Audit Devices
 
 ```bash
 vault audit list
 ```
 
 Expected output:
-```
+
+```text
 Path                         Type    Description
 ----                         ----    -----------
 vault_benchmark/             file    n/a
 vault_benchmark_filter/      file    n/a
 ```
-
-## Testing the Filter
 
 ### Generate Audit Events
 
@@ -92,9 +103,11 @@ docker exec -it vault cat /vault/logs/audit_vault_benchmark.log | jq -r '.reques
 docker exec -it vault cat /vault/logs/audit_vault_benchmark_filter.log | jq -r '.request.namespace'
 ```
 
-## Filter Syntax
+## Configuration
 
-The audit filter uses the following expression:
+### Filter Syntax
+
+The filtered audit device (`main.tf`) uses the following expression:
 
 ```hcl
 filter = "namespace == \"vault-benchmark/\""
@@ -102,38 +115,30 @@ filter = "namespace == \"vault-benchmark/\""
 
 ### Filter Expression Capabilities
 
-Vault audit filters support various expressions:
+Vault audit filters support expressions over the request properties `namespace`, `path`, `operation`, `mount_type` and `mount_point`:
 
 - **Namespace filtering**: `namespace == "myapp/"`
-- **Path filtering**: `request.path contains "secrets"`
-- **Authentication method**: `auth.token_type == "service"`
-- **Operation type**: `request.operation == "create"`
-- **Compound expressions**: `namespace == "prod/" and request.operation == "delete"`
+- **Path filtering**: `path contains "secrets"`
+- **Mount type**: `mount_type == "kv"`
+- **Operation type**: `operation == "create"`
+- **Compound expressions**: `namespace == "prod/" and operation == "delete"`
 
-For complete filter syntax documentation, see the [Vault Audit Device documentation](https://developer.hashicorp.com/vault/docs/audit).
+For complete filter syntax documentation, see the [Vault audit filtering documentation](https://developer.hashicorp.com/vault/docs/enterprise/audit/filtering).
 
-## Use Cases
+### Production Considerations
 
-Audit log filtering is valuable for:
+#### Redundant Audit Devices
 
-1. **Multi-tenant environments**: Reduce log volume by filtering to specific namespaces
-2. **Compliance requirements**: Capture only events relevant to specific workloads or data classifications
-3. **Cost optimization**: Reduce storage and log processing costs in high-volume environments
-4. **Performance**: Lower I/O overhead by writing fewer audit entries
-5. **Security focus**: Concentrate audit analysis on sensitive namespaces or operations
+Filtered audit devices should not be your only source of audit data. For production environments:
 
-## Important Considerations
-
-### Redundant Audit Devices
-
-Vault requires at least one audit device to be enabled. For production environments:
 - Always maintain redundant unfiltered audit devices for complete audit trails
 - Use filtered devices as supplementary logging for specific use cases
 - Never rely solely on filtered audit devices for compliance
 
-### Filter Testing
+#### Filter Testing
 
 Before deploying filters in production:
+
 1. Test filter expressions thoroughly in non-production environments
 2. Verify that filtered logs capture expected events
 3. Ensure unfiltered backup audit devices are configured
@@ -154,8 +159,9 @@ vault audit disable vault_benchmark
 vault audit disable vault_benchmark_filter
 ```
 
-## Additional Resources
+## References
 
 - [Vault Audit Devices](https://developer.hashicorp.com/vault/docs/audit)
+- [Vault Audit Filtering](https://developer.hashicorp.com/vault/docs/enterprise/audit/filtering)
 - [Audit Device Filter Expressions](https://developer.hashicorp.com/vault/docs/audit#filter)
 - [Audit Log Format](https://developer.hashicorp.com/vault/docs/audit#log-format)

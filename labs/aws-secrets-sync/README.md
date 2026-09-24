@@ -1,80 +1,49 @@
-# Vault AWS Secrets Manager Sync Lab
+# AWS Secrets Sync Lab
 
-This lab demonstrates HashiCorp Vault's AWS Secrets Manager synchronization feature, which automatically syncs secrets from Vault to AWS Secrets Manager in real-time.
+This lab demonstrates Vault Enterprise secrets sync, which automatically pushes secrets from a Vault KV v2 engine to AWS Secrets Manager in near real time.
 
-## Architecture
+> **Namespace:** `admin/tn001`
 
-### Components
-- **Namespace**: admin/tn001 (tenant-based isolation)
-- **Secrets Engine**: KV v2 mount at `kv-sync`
-- **Test Secrets**: Two example secrets demonstrating different use cases
-  - `app1_secrets`: API keys for external services (SendGrid, Datadog)
-  - `app2_secrets`: Webhook security secret
-- **Sync Destination**: AWS Secrets Manager in eu-west-1
-- **Granularity**: Secret-path level (entire secret syncs as one AWS secret)
+## Overview
+
+What this lab demonstrates:
+
+- Automatic activation of the secrets sync feature via Terraform (no manual step)
+- An AWS Secrets Manager sync destination in `eu-west-1`, authenticated by an IAM role that Vault assumes
+- Secret-path granularity: each Vault secret syncs as one AWS secret holding a complete JSON object
+- Template-based AWS secret naming and custom tags for tracking, cost allocation, access policies and compliance
+- Namespace isolation: the sync configuration lives in `admin/tn001`, separate from other tenants
+
+### Architecture
+
+- **Namespace**: `admin/tn001` (tenant-based isolation)
+- **Secrets engine**: KV v2 mount at `kv-sync`
+- **Test secrets**:
+  - `app1-secrets`: API keys for external services (SendGrid, Datadog)
+  - `app2-secrets`: webhook security secret
+- **Sync destination**: AWS Secrets Manager in `eu-west-1` (`aws-sm-eu-west-1`)
+- **IAM role**: `vault-secrets-sync-role`, created by `iam.tf` and assumed by Vault
+- **Granularity**: `secret-path` (entire secret syncs as one AWS secret)
 
 ### How It Works
 
-1. Terraform activates the Vault secrets sync feature (one-time operation)
-2. Secrets are stored in Vault KV v2 engine in the `admin/tn001` namespace
-3. A sync destination is configured pointing to AWS Secrets Manager
-4. Sync associations link individual Vault secrets to the AWS destination
-5. Vault automatically syncs secrets to AWS in real-time
-6. Each Vault secret syncs as a complete JSON object to AWS Secrets Manager
-7. Custom tags are applied to all synced secrets for tracking
+1. Terraform activates the secrets sync feature (one-time operation).
+2. Test secrets are written to the `kv-sync` KV v2 engine in `admin/tn001`.
+3. A sync destination is configured for AWS Secrets Manager, using the IAM role.
+4. Sync associations link each Vault secret to the destination (after a 10 second `time_sleep` that works around authentication issues between destination and association creation).
+5. Vault syncs each secret to AWS as a complete JSON object and applies the custom tags; later changes in Vault sync automatically.
 
 ### Secret Naming Convention
 
-Synced secrets in AWS follow this template:
-```
-vault/<mount_path>/<secret_path>
-```
+Synced secrets in AWS are named `vault/<mount_path>/<secret_path>`, for example `vault/kv-sync/app1-secrets`.
 
-Example: `vault/kv-sync/app1_secrets`
+The alternative `granularity = "secret-key"` would instead split each subkey into a separate AWS secret for fine-grained access control.
 
-With `granularity = "secret-path"`, the entire secret (all keys and values) syncs as a single JSON object in AWS Secrets Manager.
+### IAM Role
 
-## Prerequisites
+The role grants Vault permission to create, update, delete, read, describe, tag and untag secrets whose names start with `vault/`, plus `ListSecrets` for verification.
 
-### Vault Setup
-1. Vault Enterprise 1.16+ (with secrets sync feature)
-2. Vault unsealed and accessible
-3. Root or admin token for namespace management
-
-**Note:** The secrets sync feature activation is handled automatically by Terraform using the `vault_generic_endpoint` resource. No manual activation is required.
-
-### AWS Setup
-1. AWS account with appropriate permissions
-2. AWS credentials configured (via environment variables or AWS CLI)
-3. IAM role for Vault to assume with Secrets Manager permissions
-
-### IAM Configuration
-
-The lab automatically creates an IAM role that Vault assumes to sync secrets to AWS Secrets Manager. The role is defined in `iam.tf` and includes:
-
-**IAM Role**: `vault-secrets-sync-role` (configurable via `secrets_sync_role_name` variable)
-
-**Trust Policy**: Automatically allows the current AWS session caller identity to assume the role. This can be overridden by specifying the `trust_policy_arns` variable.
-
-**Permissions Granted**:
-- Create, update, and delete secrets in AWS Secrets Manager
-- Tag and untag secrets
-- List secrets for verification
-- Scope limited to secrets with `vault/*` prefix
-
-**Auto-Detection (Default)**:
-By default, the trust policy automatically allows your current AWS session to assume the role. No manual configuration is required.
-
-```bash
-# The lab automatically detects your current identity
-aws sts get-caller-identity
-
-# Apply without additional configuration
-terraform apply
-```
-
-**Manual Configuration (Optional)**:
-To specify different IAM principals or multiple principals, configure the `trust_policy_arns` variable in `terraform.tfvars`:
+By default the trust policy allows the current AWS session caller identity to assume the role, so no manual configuration is required. To trust different or multiple principals, set `trust_policy_arns` in `terraform.tfvars`:
 
 ```hcl
 # terraform.tfvars
@@ -84,17 +53,14 @@ trust_policy_arns = [
 ]
 ```
 
-**Verify Trust Policy**:
-After applying, check which ARNs are configured:
-```bash
-terraform output trust_policy_arns
-```
+## Prerequisites
 
-## Setup
-
-### 1. Ensure Prerequisites
-
-Make sure Vault is running and you have AWS credentials:
+- Core stack running and unsealed (see the [root README](../../README.md))
+- Vault Enterprise 1.16+ with the secrets sync feature, and a root or admin token for namespace management
+- The `admin/tn001` namespace (created by `task prereqs` in this lab, or `task namespaces` from the repository root)
+- An AWS account with permissions to manage IAM roles/policies and Secrets Manager secrets
+- AWS credentials configured via environment variables or the AWS CLI
+- AWS CLI and `jq` installed
 
 ```bash
 # Check Vault status
@@ -104,33 +70,31 @@ vault status
 aws sts get-caller-identity
 
 # Set required environment variables
-export VAULT_ADDR=https://127.0.0.1:8200
+export VAULT_ADDR=http://127.0.0.1:8200
 export VAULT_TOKEN=<your-root-token>
 export AWS_ACCESS_KEY_ID=<your-aws-key>
 export AWS_SECRET_ACCESS_KEY=<your-aws-secret>
 export AWS_REGION=eu-west-1
 ```
 
-### 2. Create Namespace (if needed)
-
-Use the Taskfile automation to ensure the namespace exists:
-
-```bash
-# From repository root
-task check-tn001-namespace
-```
-
-Or manually verify:
-
-```bash
-vault namespace list
-vault namespace list -namespace=admin
-```
-
-### 3. Deploy Terraform Configuration
+## Quick Start
 
 ```bash
 cd labs/aws-secrets-sync
+
+# Create namespace if needed, init, plan, apply, show outputs and verify AWS
+task all
+```
+
+## Usage
+
+### Deploy Step by Step
+
+```bash
+cd labs/aws-secrets-sync
+
+# Ensure admin/tn001 exists
+task prereqs
 
 # Initialize Terraform
 terraform init
@@ -140,30 +104,26 @@ terraform plan
 
 # Apply configuration
 terraform apply
-```
 
-### 4. Verify Deployment
-
-Check the outputs for sync status:
-
-```bash
+# Check sync details and the full demo command list
 terraform output synced_secrets
 terraform output demo_workflow
+
+# Check which IAM principals the trust policy allows
+terraform output trust_policy_arns
 ```
 
-## Testing the Sync
-
-### 1. Read Secrets from Vault
+### Read Secrets from Vault
 
 ```bash
 # List all secrets
 vault kv list -namespace=admin/tn001 kv-sync
 
 # Read a specific secret
-vault kv get -namespace=admin/tn001 kv-sync/app1_secrets
+vault kv get -namespace=admin/tn001 kv-sync/app1-secrets
 ```
 
-### 2. Verify Secrets in AWS
+### Verify Secrets in AWS
 
 ```bash
 # List all Vault-managed secrets in AWS
@@ -171,21 +131,21 @@ aws secretsmanager list-secrets \
   --region eu-west-1 \
   --filters Key=tag-key,Values=ManagedBy
 
-# Get specific secret value (replace with actual mount path, e.g., kv-sync)
+# Get specific secret value
 # This returns the entire secret as a JSON object
 aws secretsmanager get-secret-value \
   --region eu-west-1 \
-  --secret-id vault/<mount_path>/app1_secrets \
+  --secret-id vault/kv-sync/app1-secrets \
   --query SecretString --output text | jq
 ```
 
-### 3. Test Real-Time Sync
+`task verify-aws` lists the same secrets as a table (name, ARN, creation date) with a total count.
 
-Update a secret in Vault and verify it syncs to AWS:
+### Test Real-Time Sync
 
 ```bash
 # Update secret in Vault
-vault kv put -namespace=admin/tn001 kv-sync/app1_secrets \
+vault kv put -namespace=admin/tn001 kv-sync/app1-secrets \
   sendgrid_key=SG.new_key_updated_123.xyz789 \
   datadog_key=dd_api_key_updated_456
 
@@ -195,160 +155,36 @@ sleep 5
 # Verify updated value in AWS (returns complete JSON)
 aws secretsmanager get-secret-value \
   --region eu-west-1 \
-  --secret-id vault/<mount_path>/app1_secrets \
+  --secret-id vault/kv-sync/app1-secrets \
   --query SecretString --output text | jq
 ```
 
-### 4. Monitor Sync Status
-
-Use Terraform to check sync status:
+### Monitor Sync Status
 
 ```bash
-# Refresh state and view sync details
+# Show destination associations and their sync status (with synced/total counts)
+task verify-sync
+
+# Or refresh Terraform state and view sync details
 terraform refresh
 terraform output synced_secrets
 ```
 
-The output shows:
-- Vault path for each secret
-- Sync status (SYNCED, PENDING, FAILED)
-- List of synced subkeys
-- Last update timestamp
+The `synced_secrets` output shows the Vault path, destination and association metadata (sync status such as `SYNCED`, `PENDING` or `FAILED`, synced subkeys and last update time) for each secret.
 
-### 5. Taskfile Automation
+## Configuration
 
-The lab includes Taskfile tasks for automated secret management and testing:
+### Terraform Structure
 
-#### verify-sync
+| File | Purpose |
+|------|---------|
+| `main.tf` | Sync activation, KV v2 mount, test secrets, AWS destination, `time_sleep`, sync associations |
+| `iam.tf` | IAM trust policy, Secrets Manager policy, `vault-secrets-sync-role` and attachment |
+| `providers.tf` | AWS provider, default Vault provider and `vault.tn001` alias (`namespace = "admin/tn001"`) |
+| `variables.tf` | Input variables |
+| `outputs.tf` | Outputs |
 
-Checks the current sync destination associations status:
-
-```bash
-task verify-sync
-```
-
-This task displays:
-- Sync destination type and name
-- Current namespace
-- Associated secrets in JSON format
-- Sync status for all associations
-
-Use this to monitor which secrets are currently synced to AWS and their status.
-
-#### secrets:update
-
-Updates secrets in Vault with new values to trigger AWS sync:
-
-```bash
-task secrets:update
-```
-
-This task:
-- Updates all test secrets with timestamp-based values
-- Automatically triggers AWS Secrets Manager sync
-- Useful for testing real-time sync behavior
-
-#### secrets:refresh
-
-Refreshes Terraform state to check sync status:
-
-```bash
-task secrets:refresh
-```
-
-This task:
-- Runs `terraform apply -refresh` for each secret resource
-- Updates Terraform state with latest sync status
-- Useful for verifying sync completion without modifying secrets
-
-#### verify-aws
-
-Verifies secrets exist in AWS Secrets Manager:
-
-```bash
-task verify-aws
-```
-
-This task displays:
-- List of all Vault-managed secrets in AWS
-- Secret names, ARNs, and creation dates
-- Total count of synced secrets
-
-## Key Features Demonstrated
-
-### 1. Granular Sync Control
-
-The lab uses `granularity = "secret-path"` which means:
-- Each complete secret (with all key-value pairs) syncs as a single AWS secret
-- Simpler management with one AWS secret per Vault secret
-- Secret returned as a complete JSON object from AWS
-- Ideal for related configuration values that should stay together
-
-Alternative: `granularity = "secret-key"` splits each subkey into a separate AWS secret for fine-grained access control.
-
-### 2. Custom Tagging
-
-All synced secrets include custom tags:
-```hcl
-custom_tags = {
-  "ManagedBy"   = "Vault"
-  "Environment" = "training"
-  "Namespace"   = "admin/tn001"
-  "Source"      = "vault-secrets-sync"
-}
-```
-
-Use tags for:
-- Cost allocation
-- Access policies
-- Filtering and searching
-- Compliance tracking
-
-### 3. Template-Based Naming
-
-The `secret_name_template` controls AWS secret names:
-```hcl
-secret_name_template = "vault/{{ .MountPath | lowercase }}/{{ .SecretPath | lowercase }}"
-```
-
-Available template variables:
-- `{{ .MountAccessor }}` - Unique mount identifier (e.g., `auth_token_a1b2c3d4`)
-- `{{ .MountPath }}` - Mount path (e.g., `kv-sync`) - used in this lab
-- `{{ .SecretPath }}` - Secret path in Vault (e.g., `app1_secrets`)
-- `{{ .Key }}` - Secret subkey (required when using `granularity = "secret-key"`)
-
-### 4. Namespace Isolation
-
-Secrets are isolated in the `admin/tn001` namespace:
-- Multi-tenant architecture
-- Separate sync configurations per namespace
-- Independent access policies
-
-## Terraform Configuration
-
-### Automatic Feature Activation
-
-The lab automatically activates the Vault secrets sync feature using `vault_generic_endpoint`:
-
-```hcl
-resource "vault_generic_endpoint" "activate_secrets_sync" {
-  path           = "sys/activation-flags/secrets-sync/activate"
-  disable_read   = true
-  disable_delete = true
-
-  data_json = "{}"
-}
-```
-
-**Key points:**
-- `disable_read = true`: The activation endpoint doesn't support read operations
-- `disable_delete = true`: Activation is permanent and cannot be reversed
-- All sync resources depend on this activation completing first
-- This is a one-time operation; subsequent applies are idempotent
-
-### Centralized Configuration
-
-The lab uses locals for easy customization:
+Test secrets are defined in a single `local.test_secrets` map and created with `for_each`, as are the sync associations:
 
 ```hcl
 locals {
@@ -370,35 +206,105 @@ locals {
 }
 ```
 
-### Provider Aliases
+Map keys use underscores; the Vault secret names replace them with hyphens (`app1-secrets`, `app2-secrets`).
 
-Namespace-specific provider for scoped operations:
+### Feature Activation
 
 ```hcl
-provider "vault" {
-  alias     = "tn001"
-  namespace = "admin/tn001"
+resource "vault_generic_endpoint" "activate_secrets_sync" {
+  path           = "sys/activation-flags/secrets-sync/activate"
+  disable_read   = true
+  disable_delete = true
+
+  data_json = "{}"
 }
 ```
 
-### Dynamic Resource Creation
+- `disable_read = true`: the activation endpoint does not support reads
+- `disable_delete = true`: activation is permanent and cannot be reversed
+- All sync resources depend on activation; subsequent applies are idempotent
 
-Uses `for_each` to create secrets and associations dynamically:
+### Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `aws_region` | `eu-west-1` | AWS region for the Secrets Manager destination |
+| `namespace_path` | `admin/tn001` | Vault namespace path for secrets sync |
+| `kv_mount_path` | `kv-sync` | KV v2 mount path for source secrets |
+| `sync_destination_name` | `aws-sm-eu-west-1` | Name of the sync destination |
+| `secrets_sync_role_name` | `vault-secrets-sync-role` | IAM role name used by Vault |
+| `secret_name_template` | `vault/{{ .MountPath \| lowercase }}/{{ .SecretPath \| lowercase }}` | Template for AWS secret names |
+| `trust_policy_arns` | `[]` | IAM principals allowed to assume the role; empty means the current caller identity |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `namespace_path` | Namespace where secrets are configured |
+| `kv_mount_path` | KV v2 mount path |
+| `kv_mount_accessor` | KV v2 mount accessor |
+| `sync_destination_name` | Sync destination name |
+| `sync_destination_type` | Sync destination type |
+| `aws_region` | AWS region where secrets are synced |
+| `aws_account_id` | AWS account ID |
+| `synced_secrets` | Map of synced secrets and association details |
+| `vault_read_commands` | Commands to read secrets from Vault |
+| `aws_cli_commands` | AWS CLI commands to verify synced secrets |
+| `demo_workflow` | Step-by-step demonstration commands |
+| `iam_role_arn` | ARN of the Vault sync IAM role |
+| `iam_role_name` | Name of the Vault sync IAM role |
+| `trust_policy_arns` | Principals in the trust policy (auto-detected or configured) |
+
+### Custom Tags
+
+All synced secrets receive these tags:
 
 ```hcl
-resource "vault_kv_secret_v2" "test_secrets" {
-  for_each = local.test_secrets
-  # Configuration...
+custom_tags = {
+  "ManagedBy"   = "Vault"
+  "Environment" = "training"
+  "Namespace"   = var.namespace_path
+  "Source"      = "vault-secrets-sync"
 }
 ```
+
+### Name Template
+
+```hcl
+secret_name_template = "vault/{{ .MountPath | lowercase }}/{{ .SecretPath | lowercase }}"
+```
+
+| Template Variable | Description |
+|-------------------|-------------|
+| `{{ .MountAccessor }}` | Unique mount identifier (e.g. `auth_token_a1b2c3d4`) |
+| `{{ .MountPath }}` | Mount path (e.g. `kv-sync`), used in this lab |
+| `{{ .SecretPath }}` | Secret path in Vault (e.g. `app1-secrets`) |
+| `{{ .Key }}` | Secret subkey (required with `granularity = "secret-key"`) |
+
+## Available Tasks
+
+Run these from `labs/aws-secrets-sync`.
+
+| Task | Description |
+|------|-------------|
+| `task all` | Complete setup: `prereqs`, `init`, `plan`, `apply`, `output`, `verify-aws` |
+| `task prereqs` | Check and create the `admin` and `admin/tn001` namespaces if missing |
+| `task init` | Initialize Terraform |
+| `task plan` | Plan Terraform changes |
+| `task apply` | Apply Terraform configuration (`-auto-approve`) |
+| `task output` | Show Terraform outputs |
+| `task verify-sync` | Show destination type/name, namespace, associations JSON and synced/total counts |
+| `task verify-aws` | List Vault-managed secrets in AWS (name, ARN, creation date) and the total count |
+| `task secrets:update` | Write timestamped `username`/`password` values to the test secret paths to trigger a sync |
+| `task secrets:refresh` | Replace the sync associations (`terraform apply -replace`), then run `verify-aws` and `verify-sync` |
+| `task cleanup-sync-destination` | Delete the sync destination with `purge=true` and remove associations from Terraform state |
+| `task destroy` | Run `terraform destroy -auto-approve` |
+| `task cleanup-aws` | Force delete Vault-managed secrets from AWS Secrets Manager (prompts unless `SKIP_PROMPT=true`) |
 
 ## Troubleshooting
 
 ### Sync Status Shows PENDING
 
-**Issue**: Secrets show PENDING status instead of SYNCED
-
-**Solutions**:
 1. Check AWS credentials are valid:
    ```bash
    aws sts get-caller-identity
@@ -416,16 +322,13 @@ resource "vault_kv_secret_v2" "test_secrets" {
    aws iam list-attached-role-policies --role-name vault-secrets-sync-role
    ```
 
-3. Check Vault logs for errors:
+3. Check Vault logs for errors (from the repository root):
    ```bash
    task logs-vault
    ```
 
 ### Sync Status Shows FAILED
 
-**Issue**: Secrets fail to sync to AWS
-
-**Solutions**:
 1. Check AWS region matches configuration:
    ```bash
    echo $AWS_REGION
@@ -437,7 +340,7 @@ resource "vault_kv_secret_v2" "test_secrets" {
    aws secretsmanager list-secrets --region eu-west-1
    ```
 
-3. Check for AWS service limits or quotas
+3. Check for AWS service limits or quotas.
 
 4. Review Vault audit logs:
    ```bash
@@ -446,12 +349,9 @@ resource "vault_kv_secret_v2" "test_secrets" {
 
 ### Cannot Find Secrets in AWS
 
-**Issue**: Secrets synced but not visible in AWS console
+1. Verify the region in the AWS console is `eu-west-1`.
 
-**Solutions**:
-1. Verify region in AWS console matches `eu-west-1`
-
-2. Use correct secret name format:
+2. Use the correct secret name format:
    ```bash
    # Get mount path from Terraform
    terraform output kv_mount_path
@@ -460,14 +360,13 @@ resource "vault_kv_secret_v2" "test_secrets" {
    aws secretsmanager list-secrets --filters Key=name,Values=vault/<mount_path>/
    ```
 
-3. Check secret name template in Terraform output
+3. Check the `secret_name_template` variable.
 
 ### Authentication Errors
 
-**Issue**: Vault cannot authenticate to AWS
+Vault cannot authenticate to AWS.
 
-**Solutions**:
-1. Ensure environment variables are set:
+1. Ensure environment variables are set, and check for conflicts between an AWS profile and environment variables:
    ```bash
    env | grep AWS
    ```
@@ -477,9 +376,7 @@ resource "vault_kv_secret_v2" "test_secrets" {
    aws s3 ls
    ```
 
-3. Check for credential conflicts (profile vs environment variables)
-
-4. Verify your IAM principal can assume the Vault sync role:
+3. Verify your IAM principal can assume the Vault sync role:
    ```bash
    # Test assuming the role
    aws sts assume-role \
@@ -487,7 +384,7 @@ resource "vault_kv_secret_v2" "test_secrets" {
      --role-session-name test-session
    ```
 
-5. Check which IAM principals are allowed in the trust policy:
+4. Check which IAM principals are allowed in the trust policy:
    ```bash
    # View the auto-detected or configured ARNs
    terraform output trust_policy_arns
@@ -501,61 +398,38 @@ resource "vault_kv_secret_v2" "test_secrets" {
 
 ### Namespace Not Found
 
-**Issue**: Terraform fails with namespace not found error
+Terraform fails with a namespace not found error.
 
-**Solutions**:
-1. Create namespace using Taskfile:
-   ```bash
-   task check-tn001-namespace
-   ```
+```bash
+# Create namespaces with the lab task
+task prereqs
 
-2. Manually create namespaces:
-   ```bash
-   vault namespace create admin
-   vault namespace create -namespace=admin tn001
-   ```
+# Or create them manually
+vault namespace create admin
+vault namespace create -namespace=admin tn001
 
-3. Verify namespace exists:
-   ```bash
-   vault namespace list -namespace=admin
-   ```
+# Verify namespace exists
+vault namespace list -namespace=admin
+```
 
 ## Cleanup
 
-The lab includes automated cleanup tasks for safe and complete resource removal:
+AWS Secrets Manager secrets are not deleted by Terraform, so always remove them with `task cleanup-aws` (or manually) after destroying the Terraform resources. When deleting a sync destination directly, `purge=true` is required to force removal of all its associations.
 
-### Cleanup Tasks Reference
-
-| Task | Description | When to Use |
-|------|-------------|-------------|
-| `task verify-sync` | Check sync status | Before cleanup to see what will be removed |
-| `task cleanup-sync-destination` | Delete sync destination with purge | Remove sync destination and associations only |
-| `task destroy` | Complete cleanup | Remove everything (recommended) |
-| `task cleanup-aws` | Clean AWS secrets only | Remove orphaned AWS secrets after Terraform destroy |
-
-### Option 1: Complete Cleanup (Recommended)
+### Complete Cleanup (Recommended)
 
 ```bash
 # Check what's currently synced
 task verify-sync
 
-# Destroy all Terraform-managed resources
+# Destroy all Terraform-managed resources (sync destination and associations, KV engine and secrets, IAM role and policy)
 task destroy
 
 # Clean up AWS secrets (not removed by Terraform)
 task cleanup-aws
 ```
 
-The `task destroy` command runs `terraform destroy -auto-approve` to remove all Terraform-managed resources including:
-- Vault secrets sync destination and associations
-- KV secrets engine and test secrets
-- IAM role and policies
-
-**Important**: AWS Secrets Manager secrets are NOT automatically deleted by Terraform due to AWS deletion protection. After destroying Terraform resources, you must run `task cleanup-aws` to remove the synced secrets from AWS.
-
-### Option 2: Step-by-Step Cleanup
-
-If you need more control over the cleanup process:
+### Step-by-Step Cleanup
 
 ```bash
 # Step 1: Remove sync destination and associations
@@ -568,22 +442,9 @@ terraform destroy
 task cleanup-aws
 ```
 
-The `task cleanup-sync-destination` command:
-- Extracts sync destination details from Terraform output
-- Shows current association count
-- Deletes the sync destination using Vault API with `purge=true` flag
-- Verifies associations have been removed (gracefully handles expected errors)
-- Uses the [Vault Secrets Sync API](https://developer.hashicorp.com/vault/api-docs/system/secrets-sync#delete-destination)
+`task cleanup-sync-destination` reads the destination details from Terraform outputs, shows the association count, deletes the destination via the [Vault Secrets Sync API](https://developer.hashicorp.com/vault/api-docs/system/secrets-sync#delete-destination) with `purge=true`, verifies the associations are gone and removes them from Terraform state.
 
-The `task cleanup-aws` command:
-- Lists all Vault-managed secrets in AWS Secrets Manager
-- Prompts for confirmation before deletion (unless SKIP_PROMPT=true)
-- Force deletes secrets without recovery period
-- Verifies cleanup completion
-
-### Option 3: Manual Cleanup
-
-If you prefer complete manual control:
+### Manual Cleanup
 
 ```bash
 # Delete sync destination via API
@@ -600,12 +461,7 @@ aws secretsmanager list-secrets --region eu-west-1 --filters Key=tag-key,Values=
 aws secretsmanager delete-secret --region eu-west-1 --secret-id <secret-id> --force-delete-without-recovery
 ```
 
-**Important Notes**:
-- The `purge=true` parameter is critical when deleting sync destinations - it forces removal of all associations
-- AWS secrets are NOT automatically deleted by Terraform due to AWS deletion protection
-- Always use `task cleanup-aws` or manually delete AWS secrets after running `task destroy`
-
-## Additional Resources
+## References
 
 - [Vault Secrets Sync Documentation](https://developer.hashicorp.com/vault/docs/sync)
 - [Vault Secrets Sync API](https://developer.hashicorp.com/vault/api-docs/system/secrets-sync) - API reference for managing sync destinations and associations
