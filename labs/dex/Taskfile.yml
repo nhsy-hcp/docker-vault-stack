@@ -2,8 +2,10 @@
 version: '3'
 
 vars:
+  # Inherits the root Taskfile's CONTAINER_RUNTIME when included; defaults to podman
+  CONTAINER_RUNTIME: '{{.CONTAINER_RUNTIME | default "podman"}}'
   # Lab-local compose file; interpolates variables from the root .env
-  COMPOSE: docker compose --env-file ../../.env -f docker-compose.yml
+  COMPOSE: "{{.CONTAINER_RUNTIME}} compose --env-file ../../.env -f docker-compose.yml"
   NETWORK: docker-vault-stack
 
 tasks:
@@ -19,7 +21,7 @@ tasks:
     preconditions:
       - sh: test -f ../../.env
         msg: Root .env not found
-      - sh: docker network inspect {{.NETWORK}} > /dev/null 2>&1
+      - sh: "{{.CONTAINER_RUNTIME}} network inspect {{.NETWORK}} > /dev/null 2>&1"
         msg: Network {{.NETWORK}} not found - start the core stack first (task up)
     cmds:
       - "{{.COMPOSE}} up -d --pull=missing"

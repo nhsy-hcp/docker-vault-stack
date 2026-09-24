@@ -2,8 +2,10 @@
 version: '3'
 
 vars:
+  # Inherits the root Taskfile's CONTAINER_RUNTIME when included; defaults to podman
+  CONTAINER_RUNTIME: '{{.CONTAINER_RUNTIME | default "podman"}}'
   # Lab-local compose file; interpolates variables from the root .env
-  COMPOSE: docker compose --env-file ../../.env -f docker-compose.yml
+  COMPOSE: "{{.CONTAINER_RUNTIME}} compose --env-file ../../.env -f docker-compose.yml"
   NETWORK: docker-vault-stack
   # Must match var.vault_oidc_mount_path
   OIDC_MOUNT: authentik-oidc
@@ -13,7 +15,9 @@ tasks:
     desc: Complete setup workflow (up + setup-admin + init + apply)
     cmds:
       - task: up
-      - ./scripts/setup-admin.sh
+      - cmd: ./scripts/setup-admin.sh
+        env:
+          CONTAINER_RUNTIME: "{{.CONTAINER_RUNTIME}}"
       - task: init
       - task: apply
 
@@ -22,7 +26,7 @@ tasks:
     preconditions:
       - sh: test -f ../../.env
         msg: Root .env not found
-      - sh: docker network inspect {{.NETWORK}} > /dev/null 2>&1
+      - sh: "{{.CONTAINER_RUNTIME}} network inspect {{.NETWORK}} > /dev/null 2>&1"
         msg: Network {{.NETWORK}} not found - start the core stack first (task up)
     cmds:
       - "{{.COMPOSE}} up -d --pull=missing"

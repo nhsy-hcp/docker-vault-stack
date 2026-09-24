@@ -6,6 +6,8 @@ version: '3'
 # Running here directly requires `source ../../.env` first.
 
 vars:
+  # Inherits the root Taskfile's CONTAINER_RUNTIME when included; defaults to podman
+  CONTAINER_RUNTIME: '{{.CONTAINER_RUNTIME | default "podman"}}'
   NAMESPACE: admin/tn001
   TMP_DIR: .tmp
   # Terraform scopes resources with var.vault_namespace, relative to the provider
@@ -16,6 +18,7 @@ vars:
 x-env: &ns_env
   VAULT_NAMESPACE: "{{.NAMESPACE}}"
   TF_VAR_vault_namespace: "{{.NAMESPACE}}"
+  CONTAINER_RUNTIME: "{{.CONTAINER_RUNTIME}}"
 
 tasks:
   default:
@@ -175,7 +178,7 @@ tasks:
     env: *ns_env
     cmds:
       - |
-         docker run --rm -d \
+         {{.CONTAINER_RUNTIME}} run --rm -d \
            --name acme-web \
            --network docker-vault-stack \
            --network-alias acme-demo.example.com \
@@ -198,7 +201,7 @@ tasks:
     desc: Stop and remove ACME demo containers
     env: *ns_env
     cmds:
-      - docker rm -f acme-web acme-certbot 2>/dev/null || true
+      - "{{.CONTAINER_RUNTIME}} rm -f acme-web acme-certbot 2>/dev/null || true"
 
   acme:certbot:clean:
     desc: Remove local certbot state under acme/etc

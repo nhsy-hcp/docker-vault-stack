@@ -8,6 +8,7 @@ VAULT_NAMESPACE="${VAULT_NAMESPACE:?VAULT_NAMESPACE must be set}"
 # Address of Vault as seen from inside the docker-vault-stack network
 ACME_VAULT_ADDR="${ACME_VAULT_ADDR:-http://vault.localhost:8200}"
 CERTBOT_CERT_NAME="${CERTBOT_CERT_NAME:-acme-demo.example.com}"
+CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-podman}"
 LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Fresh external account binding (EAB) credentials; the mount requires EAB
@@ -17,7 +18,7 @@ eab_hmac_key="$(jq -r '.data.key' <<<"$eab_json")"
 
 mkdir -p "$LAB_DIR/acme/etc" "$LAB_DIR/acme/web"
 
-docker run --rm \
+"$CONTAINER_RUNTIME" run --rm \
   --name acme-certbot \
   --network docker-vault-stack \
   -e VAULT_ADDR="$ACME_VAULT_ADDR" \

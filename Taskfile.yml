@@ -5,7 +5,8 @@ dotenv:
   - .env
 
 vars:
-  CONTAINER_RUNTIME: docker
+  # Override with CONTAINER_RUNTIME=docker (env var or task arg)
+  CONTAINER_RUNTIME: '{{.CONTAINER_RUNTIME | default "podman"}}'
   BACKUP_DIR: .backups
   # Base namespaces for labs, parents before children (created by `task namespaces`)
   NAMESPACES: admin admin/tn001
@@ -223,11 +224,14 @@ tasks:
 
 
   config:
-    desc: Configure Vault audit logging
+    desc: Configure Vault audit devices and token TTLs
     cmds:
       - |
         export VAULT_TOKEN=$(cat vault-init.json | jq -r '.root_token')
-        # {{ .CONTAINER_RUNTIME }} compose exec vault chown vault:vault /vault/logs
+        # Podman resets an empty named volume to the mounting container's user (alloy
+        # mounts vault-logs as root), so re-own it before Vault creates the audit file.
+        # Once the file exists the volume is non-empty and keeps its ownership.
+        {{ .CONTAINER_RUNTIME }} compose exec -T -u root vault chown vault:vault /vault/logs
         ./scripts/30_vault_config.sh
         {{ .CONTAINER_RUNTIME }} compose restart alloy
         {{ .CONTAINER_RUNTIME }} compose restart prometheus

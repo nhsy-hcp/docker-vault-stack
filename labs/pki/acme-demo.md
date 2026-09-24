@@ -73,6 +73,8 @@ task acme:down            # stop acme-web / acme-certbot
 task acme:certbot:clean   # remove acme/etc (certbot accounts, keys, certs)
 ```
 
+After rebuilding Vault (`task down` / `task up`), run `task acme:certbot:clean` before `acme:certbot`: the saved certbot account no longer exists in the new Vault and certbot fails with `account not found`.
+
 ## What to say while demoing
 
 - ACME lets a client prove domain control automatically.

@@ -1,6 +1,6 @@
 # docker-vault-stack
 
-A Docker Compose stack for learning HashiCorp Vault Enterprise features with integrated monitoring and hands-on lab exercises.
+A Compose stack (Podman by default, Docker supported) for learning HashiCorp Vault Enterprise features with integrated monitoring and hands-on lab exercises.
 
 ## Components
 
@@ -11,10 +11,13 @@ A Docker Compose stack for learning HashiCorp Vault Enterprise features with int
 ## Prerequisites
 
 ```bash
-brew install go-task jq
+brew install go-task jq podman
 brew tap hashicorp/tap && brew install hashicorp/tap/vault
-docker --version && docker compose version
+podman machine init --rootful && podman machine start
+podman --version && podman compose version
 ```
+
+Tasks use Podman by default. To use Docker instead, set `CONTAINER_RUNTIME=docker` (e.g. `CONTAINER_RUNTIME=docker task up`).
 
 Copy `.env.example` to `.env` and set `VAULT_LICENSE`. `VAULT_TOKEN` is written by `task init`; do not edit it manually. The `.env` file is the source of environment configuration for all scripts and tasks.
 
@@ -24,7 +27,7 @@ Copy `.env.example` to `.env` and set `VAULT_LICENSE`. `VAULT_TOKEN` is written 
 task up          # start the stack
 task init        # initialize Vault (first time only)
 task unseal      # unseal Vault
-task config      # audit devices and token TTLs
+task config      # file + stdout audit devices (shipped to Loki via Alloy) and token TTLs
 source .env
 vault status
 ```

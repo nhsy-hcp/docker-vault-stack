@@ -295,7 +295,7 @@ vault kv get -namespace=bu01 team1/app1
 ## Development Workflow
 
 ### Prerequisites
-- Docker and Docker Compose
+- Podman with `podman compose` (default runtime); Docker also works via `CONTAINER_RUNTIME=docker`
 - Task runner: `brew install go-task jq`
 - Terraform CLI
 - Vault CLI
@@ -305,10 +305,11 @@ vault kv get -namespace=bu01 team1/app1
 1. `task up` - Start stack
 2. `task init` - Initialize Vault (first time)
 3. `task unseal` - Unseal Vault
-4. `source .env` - Load environment
+4. `task config` - Enable audit devices and set token TTLs
+5. `source .env` - Load environment
    - `task namespaces` - Create base lab namespaces if the lab needs them
-5. Work in lab directories with `terraform init/plan/apply`
-6. `task clean` - Full cleanup when done
+6. Work in lab directories with `terraform init/plan/apply`
+7. `task clean` - Full cleanup when done
 
 ### Debugging
 - Vault logs: `task logs-vault`
@@ -325,10 +326,16 @@ vault kv get -namespace=bu01 team1/app1
 - TLS is disabled by default for easier deployment
 - This is a training environment - production deployments should use TLS
 
+### Container Runtime and Audit Logs
+- Root and lab tasks use `{{.CONTAINER_RUNTIME}}` (default `podman`; override with `CONTAINER_RUNTIME=docker task up`). Lab Taskfiles (`authentik`, `dex`, `pki`) declare `CONTAINER_RUNTIME: '{{.CONTAINER_RUNTIME | default "podman"}}'` so they inherit the root value when included and still work standalone; scripts they call (`setup-admin.sh`, `acme-certbot.sh`) read `${CONTAINER_RUNTIME:-podman}` from the task env.
+- Vault uses the image's own `docker-entrypoint.sh` as root (`command: ["server"]`, `SKIP_SETCAP=true` because the image has no `setcap` and `raft.hcl` disables mlock); it chowns `/vault/{config,file,logs}` and drops to the `vault` user.
+- **Podman empty-volume ownership:** while a named volume is empty, Podman resets its root to the user of any container that mounts it. Alloy mounts `vault-logs` (read-only, as root) to ship `vault_audit.log` to Loki, which flips `/vault/logs` to `root:root`. `task config` therefore chowns `/vault/logs` right before `scripts/30_vault_config.sh` enables the `audit_log` file device; once the log file exists the volume keeps its ownership across restarts. Don't replace this with a startup-time chown.
+- `scripts/30_vault_config.sh` is idempotent (skips existing audit devices) and fails loudly; the file device uses `mode=0644`.
+
 ### State Management
 - Terraform state files are created in lab directories
 - `vault-init.json` contains unseal keys and root token
-- Docker volumes persist data between restarts
+- Named volumes persist data between restarts (`task down` removes them)
 
 ### Resource Naming
 When creating resources in labs, use consistent naming patterns:

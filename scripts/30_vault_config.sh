@@ -3,7 +3,7 @@
 # 30_vault_config.sh - Configure Vault for monitoring and integrations
 # This script should be run after Vault is initialized and unsealed
 
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -63,8 +63,19 @@ print_error() {
 #print_status "Token file permissions set to 600"
 #print_status "Vault configuration for Prometheus completed successfully!"
 
-vault audit enable -path="audit_log" file file_path=/vault/logs/vault_audit.log chmod=0644 || true
-vault audit enable -path="audit_stdout" file file_path=stdout || true
+# Enable an audit device unless it already exists; fail loudly on real errors
+enable_audit() {
+    local path="$1"
+    shift
+    if vault audit list -format=json | jq -e --arg p "$path/" 'has($p)' >/dev/null; then
+        print_status "Audit device $path already enabled"
+    else
+        vault audit enable -path="$path" "$@"
+    fi
+}
+
+enable_audit audit_log file file_path=/vault/logs/vault_audit.log mode=0644
+enable_audit audit_stdout file file_path=stdout
 vault audit list -detailed
 echo ""
 vault write sys/quotas/config enable_rate_limit_audit_logging=true

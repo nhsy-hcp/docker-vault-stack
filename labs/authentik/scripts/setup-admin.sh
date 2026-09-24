@@ -137,7 +137,7 @@ except Exception as e:
 EOFPYTHON
 
 # Execute Python script in container
-RESULT=$(docker compose --env-file ../../.env -f docker-compose.yml exec -T authentik python < "$SETUP_PY" 2>&1)
+RESULT=$("${CONTAINER_RUNTIME:-podman}" compose --env-file ../../.env -f docker-compose.yml exec -T authentik python < "$SETUP_PY" 2>&1)
 
 # Clean up temp file
 rm -f "$SETUP_PY"
