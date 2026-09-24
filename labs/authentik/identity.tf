@@ -1,22 +1,23 @@
-# External Group - Vault Admin (Root namespace)
-resource "vault_identity_group" "vault_admin_external" {
-  name     = "${var.vault_oidc_mount_path}-vault-admin-external"
-  type     = "external"
-  policies = [vault_policy.admin.name]
+# # External Group - Vault Admin (Root namespace)
+# resource "vault_identity_group" "vault_admin_external" {
+#   name     = "${var.vault_oidc_mount_path}-vault-admin-external"
+#   type     = "external"
+#   policies = [vault_policy.admin.name]
+#
+#   metadata = {
+#     description = "External Vault Admins group from Authentik"
+#   }
+# }
 
-  metadata = {
-    description = "External Vault Admins group from Authentik"
-  }
-}
-
-resource "vault_identity_group_alias" "vault_admin_external" {
-  name           = authentik_group.groups["vault-admin"].name
-  mount_accessor = vault_jwt_auth_backend.root.accessor
-  canonical_id   = vault_identity_group.vault_admin_external.id
-}
+# resource "vault_identity_group_alias" "vault_admin_external" {
+#   name           = authentik_group.groups["vault-admin"].name
+#   mount_accessor = vault_jwt_auth_backend.root.accessor
+#   canonical_id   = vault_identity_group.vault_admin_external.id
+# }
 
 # External Group - Team Reader (Admin namespace)
 resource "vault_identity_group" "vault_tn001_team1_reader_external" {
+  count     = var.enable_scim ? 0 : 1
   namespace = vault_namespace.admin.path_fq
   name      = "${var.vault_oidc_mount_path}-vault-tn001-team1-reader-external"
   type      = "external"
@@ -27,23 +28,26 @@ resource "vault_identity_group" "vault_tn001_team1_reader_external" {
 }
 
 resource "vault_identity_group_alias" "vault_tn001_team1_reader_external" {
+  count          = var.enable_scim ? 0 : 1
   namespace      = vault_namespace.admin.path_fq
   name           = authentik_group.groups["vault-tn001-team1-reader"].name
   mount_accessor = vault_jwt_auth_backend.admin.accessor
-  canonical_id   = vault_identity_group.vault_tn001_team1_reader_external.id
+  canonical_id   = vault_identity_group.vault_tn001_team1_reader_external[0].id
 }
 
 # Internal Group - Team Reader (Tenant namespace)
 resource "vault_identity_group" "vault_tn001_team1_reader_internal" {
+  count            = var.enable_scim ? 0 : 1
   namespace        = vault_namespace.tn001.path_fq
   name             = "${var.vault_oidc_mount_path}-vault-tn001-team1-reader-internal"
   type             = "internal"
   policies         = [vault_policy.tn001_team1_reader.name, vault_policy.tn001_ui.name]
-  member_group_ids = [vault_identity_group.vault_tn001_team1_reader_external.id]
+  member_group_ids = [vault_identity_group.vault_tn001_team1_reader_external[0].id]
 }
 
 # External Group - Team2 Reader (Admin namespace)
 resource "vault_identity_group" "vault_tn001_team2_reader_external" {
+  count     = var.enable_scim ? 0 : 1
   namespace = vault_namespace.admin.path_fq
   name      = "${var.vault_oidc_mount_path}-vault-tn001-team2-reader-external"
   type      = "external"
@@ -54,17 +58,51 @@ resource "vault_identity_group" "vault_tn001_team2_reader_external" {
 }
 
 resource "vault_identity_group_alias" "vault_tn001_team2_reader_external" {
+  count          = var.enable_scim ? 0 : 1
   namespace      = vault_namespace.admin.path_fq
   name           = authentik_group.groups["vault-tn001-team2-reader"].name
   mount_accessor = vault_jwt_auth_backend.admin.accessor
-  canonical_id   = vault_identity_group.vault_tn001_team2_reader_external.id
+  canonical_id   = vault_identity_group.vault_tn001_team2_reader_external[0].id
 }
 
 # Internal Group - Team2 Reader (Tenant namespace)
 resource "vault_identity_group" "vault_tn001_team2_reader_internal" {
+  count            = var.enable_scim ? 0 : 1
   namespace        = vault_namespace.tn001.path_fq
   name             = "${var.vault_oidc_mount_path}-vault-tn001-team2-reader-internal"
   type             = "internal"
   policies         = [vault_policy.tn001_team2_reader.name, vault_policy.tn001_ui.name]
-  member_group_ids = [vault_identity_group.vault_tn001_team2_reader_external.id]
+  member_group_ids = [vault_identity_group.vault_tn001_team2_reader_external[0].id]
+}
+
+# Resources gained count for enable_scim; keep existing state instead of recreating
+
+moved {
+  from = vault_identity_group.vault_tn001_team1_reader_external
+  to   = vault_identity_group.vault_tn001_team1_reader_external[0]
+}
+
+moved {
+  from = vault_identity_group_alias.vault_tn001_team1_reader_external
+  to   = vault_identity_group_alias.vault_tn001_team1_reader_external[0]
+}
+
+moved {
+  from = vault_identity_group.vault_tn001_team1_reader_internal
+  to   = vault_identity_group.vault_tn001_team1_reader_internal[0]
+}
+
+moved {
+  from = vault_identity_group.vault_tn001_team2_reader_external
+  to   = vault_identity_group.vault_tn001_team2_reader_external[0]
+}
+
+moved {
+  from = vault_identity_group_alias.vault_tn001_team2_reader_external
+  to   = vault_identity_group_alias.vault_tn001_team2_reader_external[0]
+}
+
+moved {
+  from = vault_identity_group.vault_tn001_team2_reader_internal
+  to   = vault_identity_group.vault_tn001_team2_reader_internal[0]
 }

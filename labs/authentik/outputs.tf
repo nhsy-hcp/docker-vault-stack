@@ -68,7 +68,7 @@ output "authentik_scim_provider_id" {
 }
 
 output "scim_bearer_token" {
-  value       = var.enable_scim ? vault_token.scim[0].client_token : null
+  value       = var.enable_scim ? local.scim_token : null
   sensitive   = true
   description = "Vault SCIM bearer token"
 }

@@ -42,7 +42,7 @@ resource "authentik_property_mapping_provider_scope" "groups" {
 
 # Create OAuth2/OIDC Provider for Vault
 resource "authentik_provider_oauth2" "vault" {
-  name               = "vault-oidc"
+  name               = "vault-${var.vault_oidc_mount_path}"
   client_id          = "vault-${random_id.client_id.hex}"
   client_secret      = random_password.client_secret.result
   authorization_flow = data.authentik_flow.default_authorization.id
@@ -50,8 +50,9 @@ resource "authentik_provider_oauth2" "vault" {
 
   allowed_redirect_uris = [
     for uri in local.vault_admin_redirect_uris : {
-      matching_mode = "strict"
-      url           = uri
+      matching_mode     = "strict"
+      url               = uri
+      redirect_uri_type = "authorization"
     }
   ]
 
@@ -65,26 +66,25 @@ resource "authentik_provider_oauth2" "vault" {
   signing_key = data.authentik_certificate_key_pair.default.id
 }
 
-# Create Application
-resource "authentik_application" "vault" {
-  name              = "HashiCorp Vault"
-  slug              = "vault"
-  protocol_provider = authentik_provider_oauth2.vault.id
-  meta_launch_url   = "http://vault.localhost:8200"
-
-  backchannel_providers = var.enable_scim ? [
-    tonumber(authentik_provider_scim.vault[0].id),
-  ] : []
+# Create vault-user group first (no parent)
+resource "authentik_group" "vault_user" {
+  name = "vault-user"
+  attributes = jsonencode({
+    description = "Standard Vault users"
+  })
 }
 
-# Create Groups
+# Create all other groups with vault-user as parent
 resource "authentik_group" "groups" {
-  for_each = var.authentik_groups
+  for_each = { for k, v in var.authentik_groups : k => v if k != "vault-user" }
 
   name = each.key
   attributes = jsonencode({
     description = each.value.description
   })
+  parents = [
+    authentik_group.vault_user.id
+  ]
 }
 
 # Create Users
@@ -95,5 +95,33 @@ resource "authentik_user" "users" {
   name     = each.value.display_name
   email    = each.value.email
   password = each.value.password
-  groups   = [for g in each.value.groups : authentik_group.groups[g].id]
+  groups = [
+    for g in each.value.groups :
+    g == "vault-user" ? authentik_group.vault_user.id : authentik_group.groups[g].id
+  ]
+}
+
+# Create policy bindings to allow vault-admin and vault-user groups access
+resource "authentik_policy_binding" "vault_admin" {
+  target = authentik_application.vault.uuid
+  group  = authentik_group.groups["vault-admin"].id
+  order  = 0
+}
+
+resource "authentik_policy_binding" "vault_user" {
+  target = authentik_application.vault.uuid
+  group  = authentik_group.vault_user.id
+  order  = 1
+}
+
+# Create Application
+resource "authentik_application" "vault" {
+  name              = "HashiCorp Vault"
+  slug              = "vault"
+  protocol_provider = authentik_provider_oauth2.vault.id
+  meta_launch_url   = "http://vault.localhost:8200"
+
+  backchannel_providers = var.enable_scim ? [
+    tonumber(authentik_provider_scim.vault[0].id),
+  ] : []
 }

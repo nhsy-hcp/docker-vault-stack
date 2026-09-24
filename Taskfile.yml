@@ -155,6 +155,7 @@ tasks:
 
   ui:
     desc: Open UIs in browser and display URLs
+    silent: true
     cmds:
       - open http://vault.localhost:8200
       - ./scripts/00_vault_vars.sh

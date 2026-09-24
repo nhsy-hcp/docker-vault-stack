@@ -87,19 +87,47 @@ resource "vault_token_auth_backend_role" "scim" {
   orphan                  = true
   token_no_default_policy = true
   token_period            = 86400 # 24 hours
+  token_bound_cidrs       = ["0.0.0.0/0"]
   allowed_policies        = [vault_policy.scim[0].name]
+  token_explicit_max_ttl  = 0
 }
 
-resource "vault_token" "scim" {
+# Create SCIM token via CLI to support entity_alias parameter
+resource "null_resource" "scim_token" {
   count = var.enable_scim ? 1 : 0
 
-  display_name      = local.scim_name
-  no_default_policy = true
-  period            = "24h"
-  renewable         = true
-  role_name         = vault_token_auth_backend_role.scim[0].role_name
+  triggers = {
+    role_name    = vault_token_auth_backend_role.scim[0].role_name
+    entity_alias = vault_identity_entity_alias.scim[0].name
+  }
 
-  depends_on = [vault_token_auth_backend_role.scim]
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      mkdir -p .tmp
+      vault write -format=json auth/token/create/${vault_token_auth_backend_role.scim[0].role_name} \
+        entity_alias=${vault_identity_entity_alias.scim[0].name} \
+        > .tmp/scim-token.json
+      echo "SCIM token created and saved to .tmp/scim-token.json"
+    EOT
+  }
+
+  depends_on = [
+    vault_token_auth_backend_role.scim,
+    vault_identity_entity_alias.scim
+  ]
+}
+
+# Read the token from the generated file
+data "local_file" "scim_token" {
+  count      = var.enable_scim ? 1 : 0
+  filename   = "${path.module}/.tmp/scim-token.json"
+  depends_on = [null_resource.scim_token]
+}
+
+locals {
+  scim_token_data = var.enable_scim ? jsondecode(data.local_file.scim_token[0].content) : null
+  scim_token      = var.enable_scim ? local.scim_token_data.auth.client_token : ""
 }
 
 resource "vault_generic_endpoint" "scim_client" {
@@ -126,9 +154,21 @@ resource "vault_generic_endpoint" "scim_client" {
 resource "authentik_provider_scim" "vault" {
   count = var.enable_scim ? 1 : 0
 
-  name                    = "vault-${local.scim_name}"
-  url                     = "${var.vault_scim_addr}/v1/identity/scim/v2"
-  token                   = try(vault_token.scim[0].client_token, "")
+  name  = "vault-${local.scim_name}"
+  url   = "${var.vault_scim_addr}/v1/identity/scim/v2"
+  token = local.scim_token
+
+
+  group_filters = concat(
+    [authentik_group.vault_user.id],
+    [for g in authentik_group.groups : g.id]
+  )
+
   property_mappings       = [data.authentik_property_mapping_provider_scim.user[0].id]
   property_mappings_group = [data.authentik_property_mapping_provider_scim.group[0].id]
+
+  # Exclude service accounts from sync
+  exclude_users_service_account = true
+
+  depends_on = [null_resource.scim_token]
 }

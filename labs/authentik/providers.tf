@@ -6,15 +6,23 @@ terraform {
     }
     vault = {
       source  = "hashicorp/vault"
-      version = "~> 5.8.0"
+      version = "~> 5.12.0"
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.6.0"
+      version = "~> 3.9.0"
     }
     time = {
       source  = "hashicorp/time"
-      version = "~> 0.12.0"
+      version = "~> 0.14.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.3.0"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.9.0"
     }
   }
 }

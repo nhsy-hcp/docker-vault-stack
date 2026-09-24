@@ -107,8 +107,8 @@ This runs:
 
 **Important**: If OIDC auth backends already exist in Vault, delete them first:
 ```bash
-vault auth disable authentik
-vault auth disable -namespace=admin authentik
+vault auth disable authentik-oidc
+vault auth disable -namespace=admin authentik-oidc
 task authentik:apply
 ```
 
@@ -266,7 +266,7 @@ cd labs/authentik
 terraform show
 
 # 4. Verify Vault OIDC configuration
-vault read auth/oidc/config
+vault read auth/authentik-oidc/config
 
 # 5. Test OIDC authentication flow
 ./scripts/demo-auth.sh
@@ -320,9 +320,8 @@ task authentik:purge
 ```
 
 This task will:
-1. Remove Terraform state for all OIDC-related resources (identity groups, auth backends, policies)
-2. Disable the Vault OIDC auth backend
-3. Delete the Vault identity group `authentik-vault-admin-external`
+1. Remove Terraform state for the root OIDC auth backend, role and policies
+2. Disable the Vault OIDC auth backend (`authentik-oidc`) in the root and admin namespaces
 
 **Use cases**:
 - Starting fresh with a new OIDC configuration

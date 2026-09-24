@@ -5,6 +5,8 @@ vars:
   # Lab-local compose file; interpolates variables from the root .env
   COMPOSE: docker compose --env-file ../../.env -f docker-compose.yml
   NETWORK: docker-vault-stack
+  # Must match var.vault_oidc_mount_path
+  OIDC_MOUNT: authentik-oidc
 
 tasks:
   all:
@@ -118,8 +120,6 @@ tasks:
     prompt: This will remove Terraform state and disable Vault OIDC auth. Continue?
     cmds:
       - echo "Removing Terraform state resources..."
-      - terraform state rm vault_identity_group.vault_admin_external || true
-      - terraform state rm vault_identity_group_alias.vault_admin_external || true
       - terraform state rm vault_jwt_auth_backend.root || true
       - terraform state rm vault_jwt_auth_backend_role.root || true
       - terraform state rm vault_policy.admin || true
@@ -129,8 +129,8 @@ tasks:
       - echo "Disabling Vault OIDC auth..."
       - |
         source ../../.env
-        vault auth disable oidc || echo "OIDC auth already disabled or not found"
-        vault delete identity/group/name/authentik-vault-admin-external || echo "Identity group already deleted or not found"
+        vault auth disable {{.OIDC_MOUNT}} || echo "OIDC auth already disabled or not found"
+        vault auth disable -namespace=admin {{.OIDC_MOUNT}} || echo "Admin namespace OIDC auth already disabled or not found"
       - echo "Purge completed"
 
   test-auth:

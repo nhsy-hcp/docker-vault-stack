@@ -190,11 +190,10 @@ vault read identity/entity/id/$ENTITY_ID
 ### Identity Groups
 
 **External Groups** (linked to Authentik):
-- `authentik-vault-admin-external` → `vault-admin` group
-- `authentik-vault-tn001-team1-reader-external` → `vault-tn001-team1-reader` group
+- `authentik-oidc-vault-tn001-team1-reader-external` → `vault-tn001-team1-reader` group
 
 **Internal Groups** (Vault-managed):
-- `authentik-vault-tn001-team1-reader-internal` → Inherits from external group
+- `authentik-oidc-vault-tn001-team1-reader-internal` → Inherits from external group
 
 ### OIDC Configuration
 
@@ -245,8 +244,8 @@ vault auth list
 vault auth list -namespace=admin
 
 # Check OIDC configuration
-vault read auth/oidc/config
-vault read -namespace=admin auth/oidc/config
+vault read auth/authentik-oidc/config
+vault read -namespace=admin auth/authentik-oidc/config
 
 # Verify group membership in Authentik UI
 # Admin Interface > Directory > Groups

@@ -91,7 +91,7 @@ resource "vault_jwt_auth_backend_role" "admin" {
   bound_audiences = [authentik_provider_oauth2.vault.client_id]
 
   bound_claims = {
-    "groups" = authentik_group.groups["vault-user"].name
+    "groups" = authentik_group.vault_user.name
   }
   bound_claims_type = "glob"
 

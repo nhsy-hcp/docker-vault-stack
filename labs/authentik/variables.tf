@@ -7,7 +7,7 @@ variable "vault_authentik_url" {
 variable "vault_oidc_mount_path" {
   description = "Path to mount OIDC auth method"
   type        = string
-  default     = "authentik"
+  default     = "authentik-oidc"
 }
 
 variable "enable_scim" {

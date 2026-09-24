@@ -3,6 +3,9 @@ set -euo pipefail
 
 # Demo script for testing Authentik OIDC authentication with Vault
 
+# OIDC auth mount path; must match var.vault_oidc_mount_path
+OIDC_MOUNT="${OIDC_MOUNT:-authentik-oidc}"
+
 echo "=== Authentik OIDC Authentication Demo ==="
 echo ""
 
@@ -33,11 +36,11 @@ test_auth() {
     echo ""
 
     if [ -z "$namespace" ]; then
-        echo "Running: vault login -method=oidc role=default"
-        vault login -method=oidc role=default
+        echo "Running: vault login -method=oidc -path=$OIDC_MOUNT role=default"
+        vault login -method=oidc -path="$OIDC_MOUNT" role=default
     else
-        echo "Running: vault login -namespace=$namespace -method=oidc role=default"
-        vault login -namespace="$namespace" -method=oidc role=default
+        echo "Running: vault login -namespace=$namespace -method=oidc -path=$OIDC_MOUNT role=default"
+        vault login -namespace="$namespace" -method=oidc -path="$OIDC_MOUNT" role=default
     fi
 
     echo ""
