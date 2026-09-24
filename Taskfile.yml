@@ -6,6 +6,7 @@ dotenv:
 
 vars:
   CONTAINER_RUNTIME: docker
+  BACKUP_DIR: .backups
 
 includes:
   # Optional labs: start with `task <lab>:up` after `task up`
@@ -87,8 +88,8 @@ tasks:
   backup:
     desc: Create Raft snapshot backup
     cmds:
-      - mkdir -p backups
-      - vault operator raft snapshot save ./backups/backup-`date +"%Y%m%d-%H%M"`.snap
+      - mkdir -p {{.BACKUP_DIR}}
+      - vault operator raft snapshot save {{.BACKUP_DIR}}/backup-`date +"%Y%m%d-%H%M"`.snap
 
   down:
     desc: Stop stack and remove volumes

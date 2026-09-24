@@ -59,6 +59,7 @@ terraform.rc
 .bob/
 .plans/
 .tmp/
+.backups/
 
 # labs
 **/.azure
