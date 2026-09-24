@@ -17,6 +17,8 @@ This is a HashiCorp Vault training environment that provides a Compose stack (Po
 - `docker-compose.yml`: Complete stack definition with Vault Enterprise and monitoring
 - `volumes/vault/raft.hcl`: Vault server configuration with Raft backend (HTTP mode)
 - `volumes/alloy/config.alloy`: Alloy configuration for metrics collection and shipping the Vault audit log to Loki
+- `volumes/grafana/datasources.yml`, `volumes/grafana/dashboards.yml`: Grafana provisioning. Prometheus `timeInterval` is `60s` to match Alloy's Vault scrape interval; bump a data source's `version` when changing it, because Grafana skips the file if its stored version is higher
+- `volumes/grafana/dashboards/*.json`: provisioned dashboards. Keep tags as `["vault", <area>, <datasource>]` and the shared `Vault dashboards` link (a dropdown of all dashboards tagged `vault`)
 - `.env`: Environment variables for VAULT_ADDR, VAULT_LICENSE, VAULT_TOKEN (template: `.env.example`)
 - `Taskfile.yml`: Task runner with all operational commands
 
@@ -61,8 +63,9 @@ task --list
 **Key Tasks:**
 - `lint` - Run pre-commit hooks on all files
 - `namespaces` - Create base lab namespaces `admin` and `admin/tn001` (idempotent, not run by `init`; override with `NAMESPACES="..."`)
-- `backup` - Save a Raft snapshot to `.backups/` (git-ignored; `BACKUP_DIR` var)
+- `backup` - Save a Raft snapshot plus `vault-init-<timestamp>.json` to `.backups/` (git-ignored; `BACKUP_DIR` var). Restoring a snapshot onto a re-initialised cluster needs `-force` and the matching unseal keys
 - `tokens` - List all token accessors with details
+- `seed` (alias `vault:seed`) - Run `scripts/seed_vault.py` via `uv` (inline PEP 723 deps: hvac, requests). Creates its own namespace tree `tn001`-`tn010` at the root (independent of `task namespaces`) and seeds each child/grandchild; idempotent (PKI root issuer only created once)
 - `authentik:all` - Complete Authentik OIDC setup workflow
 - `authentik:redeploy` - Stop, remove volumes, and restart Authentik
 - `authentik:logs` - View Authentik logs
@@ -308,11 +311,21 @@ vault kv get -namespace=bu01 team1/app1
 6. Work on labs: included labs (`authentik`, `dex`, `pki`) run from the root via `task <lab>:*`; the others via `terraform init/plan/apply` (or their own `task`) in the lab directory
 7. `task clean` - Full cleanup when done
 
+### Temporary Files
+- Put all temporary files (logs, command output, scratch data, intermediate files) in `.tmp/` at the repo root (git-ignored); create it with `mkdir -p .tmp` if missing
+- Never write temp files to `/tmp`, the repo root or `scripts/`; scripts and tasks follow the same rule (e.g. `scripts/10_vault_init.sh`, the `pki` lab's `TMP_DIR: .tmp`)
+- Remove what you created in `.tmp/` once you're done with it
+
+### Python Scripts
+- Run with `uv run` (dependencies declared inline, PEP 723); lint/format with `uvx ruff check` and `uvx ruff format` (`ruff.toml`: line length 200, default rules)
+- Catch Vault/HTTP errors only (`VAULT_ERRORS` in `scripts/seed_vault.py`), not bare `Exception`
+
 ### Debugging
 - Vault logs: `task logs-vault`
 - All services: `task logs`
 - Vault status: `vault status`
 - UI access: http://vault.localhost:8200 (Vault), http://grafana.localhost:3000 (Grafana)
+- Grafana doesn't pick up dashboard file changes on its own under Podman; run `task grafana-reload`
 
 ## Important Notes
 
@@ -320,6 +333,7 @@ vault kv get -namespace=bu01 team1/app1
 - The `.env` file contains sensitive tokens - never commit this
 - Default setup uses Vault Enterprise - ensure license compliance
 - All services expose ports locally - not for production use
+- Grafana allows anonymous Admin access with the login form disabled (`GF_AUTH_*` in `docker-compose.yml`); `admin/admin` still works for the API
 - TLS is disabled by default for easier deployment
 - This is a training environment - production deployments should use TLS
 
@@ -331,7 +345,7 @@ vault kv get -namespace=bu01 team1/app1
 
 ### State Management
 - Terraform state files are created in lab directories
-- `vault-init.json` contains unseal keys and root token
+- `vault-init.json` contains unseal keys and root token. `task init` (only after a successful `vault operator init`) and `task down` archive the previous copy to `.backups/vault-init-<timestamp>.json` via `scripts/archive_vault_init.sh`; never delete it directly
 - Named volumes persist data between restarts (`task down` removes them)
 
 ### Resource Naming

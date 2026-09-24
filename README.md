@@ -32,6 +32,8 @@ source .env
 vault status
 ```
 
+`task init` and `task down` move an existing `vault-init.json` to `.backups/vault-init-<timestamp>.json` instead of overwriting or deleting it, so older snapshots stay restorable.
+
 After a restart: `task up unseal`. Stop without losing data: `task stop`. Clean reset: `task clean` (removes all volumes including Vault data; prompts, `--yes` skips), then repeat the steps above.
 
 Run `task --list` for all tasks. Frequently used:
@@ -39,8 +41,10 @@ Run `task --list` for all tasks. Frequently used:
 | Task | Description |
 |------|-------------|
 | `task namespaces` | Create base lab namespaces `admin` and `admin/tn001` (idempotent, not run by default) |
-| `task backup` | Save a Raft snapshot to `.backups/` (git-ignored) |
+| `task backup` | Save a Raft snapshot and a matching `vault-init.json` copy (unseal keys, root token) to `.backups/` (git-ignored) |
+| `task seed` | Seed demo data: namespace tree `tn001`-`tn010` (children and `prod`/`staging`/`dev` grandchildren) with auth methods, KV, PKI, Transit, policies, identities and client logins (idempotent; needs `uv`) |
 | `task ui` | Open the Vault UI and print service URLs |
+| `task grafana-reload` | Reload Grafana dashboards after editing `volumes/grafana/dashboards/*.json` |
 | `task logs` / `task logs-vault` | Follow service logs |
 | `task benchmark` | Run vault-benchmark (requires the `vault-benchmark` CLI; run with `VAULT_ADDR=http://127.0.0.1:8200`, it can't resolve `*.localhost`) |
 | `task lint` | Run pre-commit hooks |
@@ -50,10 +54,23 @@ Run `task --list` for all tasks. Frequently used:
 | Service | URL |
 |---------|-----|
 | Vault | http://vault.localhost:8200 |
-| Grafana | http://grafana.localhost:3000 |
+| Grafana | http://grafana.localhost:3000 (no login, anonymous Admin) |
 | Prometheus | http://prometheus.localhost:9090 |
 | Loki | http://loki.localhost:3100 |
 | Alloy | http://alloy.localhost:12345 |
+
+## Dashboards
+
+Grafana loads these from `volumes/grafana/dashboards/`. Switch between them with the **Vault dashboards** menu at the top of each one.
+
+| Dashboard | Source | Shows |
+|-----------|--------|-------|
+| Vault / Operational | Prometheus | Health, request traffic, runtime, seal, replication, snapshots |
+| Vault / Integrated Storage | Prometheus | Raft leadership, commits, FSM and storage operations |
+| Vault / Tokens | Prometheus | Token creation, counts and TTLs by namespace and auth method |
+| Vault / Audit Logs | Loki | Audit requests, errors, top paths and identities (needs `task config`) |
+
+Replication, HA standby and snapshot panels stay empty on this single-node stack. After editing a dashboard's JSON, run `task grafana-reload`.
 
 ## Labs
 
@@ -71,7 +88,8 @@ Run `task --list` for all tasks. Frequently used:
 
 - Training and development use only: services are exposed on localhost over HTTP (no TLS)
 - Ensure Vault Enterprise license compliance
-- Never commit `.env`, `vault-init.json` or snapshots in `.backups/`
+- Grafana allows anonymous Admin access (no login); don't expose port 3000 beyond localhost
+- Never commit `.env`, `vault-init.json` or anything in `.backups/` (snapshots and copies of the unseal keys)
 
 ## License
 
