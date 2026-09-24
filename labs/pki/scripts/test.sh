@@ -15,6 +15,13 @@ fail() { echo "FAIL: $*"; failures=$((failures + 1)); }
 mkdir -p "$WORK_DIR"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
+# Vault backdates leaf NotBefore by 30s, so a freshly deployed intermediate
+# rejects issuance ("notBefore before signer's notBefore") for its first ~30s.
+for _ in $(seq 1 20); do
+  vault write -field=certificate pki/issue/default common_name=ready.example.com ttl=1m >/dev/null 2>&1 && break
+  sleep 3
+done
+
 # Issue a short-lived cert per role and verify it chains to the local root CA
 for role in default v1 v2; do
   issuer_var="v1"

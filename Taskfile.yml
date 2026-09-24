@@ -7,6 +7,8 @@ dotenv:
 vars:
   CONTAINER_RUNTIME: docker
   BACKUP_DIR: .backups
+  # Base namespaces for labs, parents before children (created by `task namespaces`)
+  NAMESPACES: admin admin/tn001
 
 includes:
   # Optional labs: start with `task <lab>:up` after `task up`
@@ -17,6 +19,10 @@ includes:
   dex:
     taskfile: ./labs/dex/Taskfile.yml
     dir: ./labs/dex
+    optional: true
+  pki:
+    taskfile: ./labs/pki/Taskfile.yml
+    dir: ./labs/pki
     optional: true
 
 tasks:
@@ -84,6 +90,20 @@ tasks:
     cmds:
       - |
         ./scripts/20_vault_unseal.sh
+
+  namespaces:
+    desc: Create base lab namespaces (idempotent; override with NAMESPACES="a a/b")
+    silent: true
+    cmds:
+      - for: {var: NAMESPACES}
+        cmd: |
+          ns="{{.ITEM}}"
+          parent="$(dirname "$ns")"; [ "$parent" = "." ] && parent=""
+          if vault namespace lookup -namespace="$parent" "$(basename "$ns")" >/dev/null 2>&1; then
+            echo "Namespace $ns already exists"
+          else
+            vault namespace create -namespace="$parent" "$(basename "$ns")"
+          fi
 
   backup:
     desc: Create Raft snapshot backup

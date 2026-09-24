@@ -2,7 +2,8 @@
 
 version: '3'
 
-dotenv: [../../.env]
+# Run from the repo root as `task pki:<task>` (root Taskfile loads .env).
+# Running here directly requires `source ../../.env` first.
 
 vars:
   NAMESPACE: admin/tn001
@@ -11,7 +12,8 @@ vars:
   # namespace, so VAULT_NAMESPACE must be unset or it would nest twice.
   TF: env -u VAULT_NAMESPACE terraform
 
-env:
+# Scoped per task: top-level env in an included Taskfile leaks into root tasks.
+x-env: &ns_env
   VAULT_NAMESPACE: "{{.NAMESPACE}}"
   TF_VAR_vault_namespace: "{{.NAMESPACE}}"
 
@@ -22,44 +24,52 @@ tasks:
 
   tf:init:
     desc: Initialize Terraform providers
+    env: *ns_env
     cmds:
       - "{{.TF}} init -upgrade"
 
   tf:plan:
     desc: Plan PKI Terraform changes in namespace {{.NAMESPACE}}
+    env: *ns_env
     cmds:
       - "{{.TF}} plan {{.CLI_ARGS}}"
 
   tf:apply:
     desc: Apply PKI Terraform configuration in namespace {{.NAMESPACE}}
+    env: *ns_env
     cmds:
       - "{{.TF}} apply {{.CLI_ARGS}}"
 
   test:
     desc: Run PKI lab smoke tests (issuance, chains, role limits, CRL, ACME)
+    env: *ns_env
     cmds:
       - ./scripts/test.sh
 
   default-cert:
     desc: Issue a certificate from the default PKI role and print details
+    env: *ns_env
     cmds:
       - |
          vault write -f -field=certificate pki/issue/default common_name=test.example.com | openssl x509 -text -noout
 
   v1-cert:
     desc: Issue a certificate from issuer role v1 and print details
+    env: *ns_env
     cmds:
       - |
          vault write -f -field=certificate pki/issue/v1 common_name=test.example.com | openssl x509 -text -noout
 
   v2-cert:
     desc: Issue a certificate from issuer role v2 and print details
+    env: *ns_env
     cmds:
       - |
          vault write -f -field=certificate pki/issue/v2 common_name=test.example.com | openssl x509 -text -noout
 
   sign:
     desc: Generate CSR, sign via PKI sign endpoint, and save artifacts to TMP_DIR (CN, ROLE overridable)
+    env: *ns_env
     vars:
       CN: '{{.CN | default "test.example.com"}}'
       ROLE: '{{.ROLE | default "default"}}'
@@ -76,41 +86,49 @@ tasks:
 
   crl:
     desc: Fetch and decode the PKI certificate revocation list
+    env: *ns_env
     cmds:
       - curl -sf "$VAULT_ADDR/v1/$VAULT_NAMESPACE/pki/crl/pem" | openssl crl -text -noout
 
   certs:
     desc: List issued certificate serials
+    env: *ns_env
     cmds:
       - vault list pki/certs
 
   certs-list:
     desc: List issued certificates with key metadata
+    env: *ns_env
     cmds:
       - vault list -format=json pki/certs | jq -r .[] | xargs -I {} sh -c 'echo "=== Certificate {} ==="; vault read pki/cert/{} | grep -E "serial_number|common_name|issuing_ca|expiration_time|revocation_time"'
 
   certs-count:
     desc: Count issued certificates
+    env: *ns_env
     cmds:
       - vault list -format=json pki/certs | jq length
 
   certs-detailed:
     desc: Show full decoded details for each issued certificate
+    env: *ns_env
     cmds:
       - vault list -format=json pki/certs | jq -r .[] | xargs -I {} sh -c 'vault read -field=certificate pki/cert/{} | openssl x509 -text -noout'
 
   issuers:
     desc: List configured PKI issuers
+    env: *ns_env
     cmds:
       - vault list pki/issuers
 
   issuers-detailed:
     desc: Show full details for each PKI issuer
+    env: *ns_env
     cmds:
       - vault list -format=json pki/issuers | jq -r .[] | xargs -I {} sh -c 'echo "=== Issuer {} ==="; vault read pki/issuer/{}'
 
   leases:
     desc: Inspect active leases for issued certificates across roles
+    env: *ns_env
     cmds:
       - vault list -format=json sys/leases/lookup/pki/issue/default | jq -r .[] | xargs -I {} vault lease lookup pki/issue/default/{}
       - vault list -format=json sys/leases/lookup/pki/issue/v1 | jq -r .[] | xargs -I {} vault lease lookup pki/issue/v1/{}
@@ -118,22 +136,27 @@ tasks:
 
   health-check:
     desc: Run Vault PKI health check
+    env: *ns_env
     cmds:
-      # exit code 2/3 = critical/warning findings; only fail on errors (>3) or ok
-      - vault pki health-check pki || test $? -le 3
+      # exit codes 2-4 = informational/warning/critical findings (e.g. "tidy hasn't run"
+      # on a fresh mount); only fail on usage, version or permission errors
+      - vault pki health-check pki || test $? -ge 2 -a $? -le 4
 
   tidy-now:
     desc: Run PKI tidy operation immediately
+    env: *ns_env
     cmds:
       - vault write pki/tidy tidy_cert_store=true tidy_revoked_certs=true safety_buffer=1h
 
   tidy-status:
     desc: Read status of the latest PKI tidy operation
+    env: *ns_env
     cmds:
       - vault read pki/tidy-status
 
   pki-clean:
     desc: Destroy PKI resources and clean related Terraform state
+    env: *ns_env
     cmds:
       - "{{.TF}} destroy -target 'vault_mount.pki' -auto-approve"
       - vault secrets disable pki || true
@@ -142,12 +165,14 @@ tasks:
 
   acme:init:
     desc: Initialize local ACME directories and entrypoint permissions
+    env: *ns_env
     cmds:
       - mkdir -p acme/etc acme/web
       - chmod +x acme/certbot-entrypoint.sh scripts/*.sh
 
   acme:web:
     desc: Start ACME challenge web server container
+    env: *ns_env
     cmds:
       - |
          docker run --rm -d \
@@ -159,20 +184,24 @@ tasks:
 
   acme:certbot:
     desc: Request a certificate from the Vault ACME endpoint with certbot (4096-bit key)
+    env: *ns_env
     cmds:
       - ./scripts/acme-certbot.sh 4096
 
   acme:certbot-fail:
     desc: Request an ACME certificate with a 2048-bit key (rejected by the role)
+    env: *ns_env
     cmds:
       - ./scripts/acme-certbot.sh 2048
 
   acme:down:
     desc: Stop and remove ACME demo containers
+    env: *ns_env
     cmds:
       - docker rm -f acme-web acme-certbot 2>/dev/null || true
 
   acme:certbot:clean:
     desc: Remove local certbot state under acme/etc
+    env: *ns_env
     cmds:
       - rm -rf acme/etc

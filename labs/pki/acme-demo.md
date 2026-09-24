@@ -2,10 +2,12 @@
 
 Issue a certificate from Vault's ACME server using certbot and an HTTP-01 challenge, all on the `docker-vault-stack` Docker network.
 
+Run the tasks from the repo root (`task pki:acme:...`) or from `labs/pki` after `source ../../.env` (`task acme:...`, shown below).
+
 ## Prerequisites
 
 - Core stack running and unsealed
-- PKI lab applied (`task tf:apply`) - this configures everything ACME needs:
+- PKI lab applied (`task namespaces && task pki:tf:apply` from the repo root) - this configures everything ACME needs:
   - `config/cluster` path `http://vault.localhost:8200/v1/admin/tn001/pki`
   - `Link`, `Location` and `Replay-Nonce` allowed as response headers on the mount
   - `config/acme`: enabled, `default_directory_policy = role:default`, `allowed_roles = [default]`, `eab_policy = always-required`

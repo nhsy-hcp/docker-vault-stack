@@ -57,6 +57,8 @@ task --list
 
 **Key Tasks:**
 - `lint` - Run pre-commit hooks on all files
+- `namespaces` - Create base lab namespaces `admin` and `admin/tn001` (idempotent, not run by `init`; override with `NAMESPACES="..."`)
+- `backup` - Save a Raft snapshot to `.backups/` (git-ignored; `BACKUP_DIR` var)
 - `tokens` - List all token accessors with details
 - `authentik:all` - Complete Authentik OIDC setup workflow
 - `authentik:redeploy` - Stop, remove volumes, and restart Authentik
@@ -232,15 +234,17 @@ Demonstrates the PKI secrets engine with two imported intermediate CAs, template
 - ACME with External Account Binding required; certbot demo on the `docker-vault-stack` network
 - Roles `default`, `v1`, `v2` (v2 is the stricter role), auto-tidy, audit non-HMAC keys
 
-**Namespace gotcha:** the namespace is set once in `labs/pki/Taskfile.yml` (exported as `VAULT_NAMESPACE` and `TF_VAR_vault_namespace`). Resource `namespace` is relative to the provider namespace, so Terraform must run with `VAULT_NAMESPACE` unset - use the `tf:*` tasks.
+Included in the root Taskfile as `pki` (like `authentik` and `dex`).
 
-**Lab Commands:**
+**Namespace gotcha:** the namespace is set once in `labs/pki/Taskfile.yml` and exported per task (YAML anchor `ns_env`) as `VAULT_NAMESPACE` and `TF_VAR_vault_namespace`. Top-level `env` in an included Taskfile leaks into root tasks, so don't move it there. Resource `namespace` is relative to the provider namespace, so Terraform must run with `VAULT_NAMESPACE` unset - use the `tf:*` tasks.
+
+**Lab Commands (from repo root):**
 ```bash
-cd labs/pki
-task tf:init && task tf:apply
-task test                       # smoke tests
-task default-cert | v1-cert | v2-cert | sign | crl | health-check
-task acme:init acme:web acme:certbot && task acme:down
+task namespaces                 # admin, admin/tn001
+task pki:tf:init && task pki:tf:apply
+task pki:test                   # smoke tests
+task pki:default-cert | pki:v1-cert | pki:v2-cert | pki:sign | pki:crl | pki:health-check
+task pki:acme:init pki:acme:web pki:acme:certbot && task pki:acme:down
 ```
 
 See `labs/pki/README.md` and `labs/pki/acme-demo.md`.
@@ -302,6 +306,7 @@ vault kv get -namespace=bu01 team1/app1
 2. `task init` - Initialize Vault (first time)
 3. `task unseal` - Unseal Vault
 4. `source .env` - Load environment
+   - `task namespaces` - Create base lab namespaces if the lab needs them
 5. Work in lab directories with `terraform init/plan/apply`
 6. `task clean` - Full cleanup when done
 
