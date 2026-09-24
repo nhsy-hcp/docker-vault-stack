@@ -125,7 +125,7 @@ Demonstrates namespace management, KV secrets engine, and identity groups.
 Demonstrates Authentik OIDC integration with Vault for multi-namespace authentication.
 
 **Key Features:**
-- Authentik 2026.2.2 as OIDC provider (no Redis required)
+- Authentik 2026.8.3 as OIDC provider (no Redis required)
 - Multi-namespace OIDC authentication (root and admin namespaces)
 - Automated admin user creation and API token generation
 - Group-based access control with external identity groups

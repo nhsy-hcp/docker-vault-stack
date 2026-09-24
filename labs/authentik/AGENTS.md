@@ -6,7 +6,7 @@ This document provides guidance for AI agents working with the Authentik OIDC in
 
 This lab demonstrates HashiCorp Vault integration with Authentik (open-source identity provider) using OIDC authentication. It provides a complete automated setup for:
 
-- Authentik 2026.2.2 with PostgreSQL backend
+- Authentik 2026.8.3 with PostgreSQL backend
 - Automated admin user creation and API token generation
 - Terraform-managed Vault OIDC configuration
 - User and group management via Terraform
@@ -66,7 +66,7 @@ PG_DB=authentik
 
 # Version Pinning
 AUTHENTIK_IMAGE=ghcr.io/goauthentik/server
-AUTHENTIK_TAG=2026.2.2
+AUTHENTIK_TAG=2026.8.3
 
 # Admin User Configuration (REQUIRED for setup-admin.sh)
 AUTHENTIK_ADMIN_USER=akadmin

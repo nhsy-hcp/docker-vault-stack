@@ -19,7 +19,7 @@ This lab demonstrates how to integrate [Authentik](https://goauthentik.io/) as a
 
 ### What This Lab Creates
 
-- **Authentik Stack**: OAuth2/OIDC provider (v2026.2.2) with PostgreSQL backend
+- **Authentik Stack**: OAuth2/OIDC provider (v2026.8.3) with PostgreSQL backend
 - **Vault Namespaces**: Root, admin, and tenant (tn001) with OIDC authentication
 - **Identity Groups**: External and internal groups for access control
 - **Sample Secrets**: KV secrets for testing permissions

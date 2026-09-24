@@ -1,6 +1,6 @@
 services:
   vault:
-    image: hashicorp/vault-enterprise:${VAULT_VERSION:-2.0-ent}
+    image: hashicorp/vault-enterprise:${VAULT_VERSION:-2.1-ent}
     container_name: ${COMPOSE_PROJECT_NAME}_vault
     restart: unless-stopped
     ports:
@@ -28,14 +28,14 @@ services:
     user: root
     entrypoint: ["/usr/local/bin/vault-entrypoint.sh"]
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8200/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8200/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"]
       interval: 5s
       timeout: 3s
       retries: 5
       start_period: 10s # Give Vault time to start before checking
 
   grafana:
-    image: grafana/grafana:${GRAFANA_VERSION:-latest}
+    image: grafana/grafana:${GRAFANA_VERSION:-13.2.2}
     container_name: ${COMPOSE_PROJECT_NAME}_grafana
     restart: unless-stopped
     ports:
@@ -60,7 +60,7 @@ services:
       - loki
 
   prometheus:
-    image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.14.0}
     container_name: ${COMPOSE_PROJECT_NAME}_prometheus
     restart: unless-stopped
     ports:
@@ -86,7 +86,7 @@ services:
       - '--web.enable-remote-write-receiver'
 
   loki:
-    image: grafana/loki:${LOKI_VERSION:-latest}
+    image: grafana/loki:${LOKI_VERSION:-3.7.8}
     container_name: ${COMPOSE_PROJECT_NAME}_loki
     restart: unless-stopped
     ports:
@@ -106,7 +106,7 @@ services:
 #    entrypoint: /loki/loki_perm_fix.sh
 
   alloy:
-    image: grafana/alloy:${ALLOY_VERSION:-latest}
+    image: grafana/alloy:${ALLOY_VERSION:-v1.19.2}
     container_name: ${COMPOSE_PROJECT_NAME}_alloy
 #    deploy:
 #      replicas: 0
