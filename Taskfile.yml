@@ -85,6 +85,8 @@ tasks:
     desc: Initialize Vault (first time only)
     cmds:
       - ./scripts/10_vault_init.sh {{.CLI_ARGS}}
+    env:
+      BACKUP_DIR: '{{.BACKUP_DIR}}'
 
   unseal:
     desc: Unseal Vault after restart
@@ -106,11 +108,30 @@ tasks:
             vault namespace create -namespace="$parent" "$(basename "$ns")"
           fi
 
-  backup:
-    desc: Create Raft snapshot backup
+  seed:
+    desc: Seed Vault with demo namespaces (tn001-tn010 tree), auth methods, secrets engines and KV data (idempotent)
+    aliases: ["vault:seed"]
+    preconditions:
+      - sh: command -v uv
+        msg: "uv is required: brew install uv"
     cmds:
-      - mkdir -p {{.BACKUP_DIR}}
-      - vault operator raft snapshot save {{.BACKUP_DIR}}/backup-`date +"%Y%m%d-%H%M"`.snap
+      # Dependencies are declared inline (PEP 723); uv installs them on first run
+      - uv run scripts/seed_vault.py
+
+  backup:
+    desc: Create Raft snapshot backup (with a matching copy of vault-init.json)
+    cmds:
+      - |
+        set -euo pipefail
+        ts=$(date +"%Y%m%d-%H%M")
+        mkdir -p {{.BACKUP_DIR}}
+        vault operator raft snapshot save "{{.BACKUP_DIR}}/backup-$ts.snap"
+        # Unseal keys are needed to restore the snapshot on a re-initialised cluster
+        if [ -f vault-init.json ]; then
+          install -m 600 vault-init.json "{{.BACKUP_DIR}}/vault-init-$ts.json"
+        else
+          echo "warning: vault-init.json not found; snapshot saved without unseal keys" >&2
+        fi
 
   down:
     desc: Stop stack and remove volumes
@@ -121,7 +142,7 @@ tasks:
       - task: dex:down
       - |
         {{ .CONTAINER_RUNTIME }} compose down -v
-        rm vault-init.json
+        BACKUP_DIR={{.BACKUP_DIR}} ./scripts/archive_vault_init.sh
     ignore_error: true
     vars:
       STACK_NAME:
@@ -138,6 +159,12 @@ tasks:
     cmds:
       - |
         curl -sk --header "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/metrics?format=prometheus"
+
+  grafana-reload:
+    desc: Reload provisioned Grafana dashboards after editing volumes/grafana/dashboards/*.json
+    cmds:
+      # Grafana doesn't see dashboard file changes on its own under Podman
+      - curl -sf -X POST http://admin:admin@127.0.0.1:3000/api/admin/provisioning/dashboards/reload
 
   logs-vault:
     desc: View Vault logs

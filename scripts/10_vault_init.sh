@@ -1,8 +1,8 @@
-#!/usr/bin/env bash
-set -o pipefail
+#!/bin/bash
+set -euo pipefail
 
 # Verify VAULT_ADDR is set (should be loaded by Taskfile from .env)
-if [ -z "$VAULT_ADDR" ]; then
+if [ -z "${VAULT_ADDR:-}" ]; then
     echo "Error: VAULT_ADDR not set"
     echo "Please ensure .env file exists with: export VAULT_ADDR=http://vault.localhost:8200"
     echo "Run: source .env"
@@ -17,8 +17,8 @@ attempt=1
 while [ $attempt -le $max_attempts ]; do
     # vault status returns exit code 0 (unsealed), 1 (error), or 2 (sealed)
     # Both 0 and 2 mean Vault is accessible
-    vault status >/dev/null 2>&1
-    status_code=$?
+    status_code=0
+    vault status >/dev/null 2>&1 || status_code=$?
 
     if [ $status_code -eq 0 ] || [ $status_code -eq 2 ]; then
         echo "Vault is accessible."
@@ -36,13 +36,14 @@ while [ $attempt -le $max_attempts ]; do
     attempt=$((attempt + 1))
 done
 
-vault status
+# Exit code 2 (sealed) is expected before init
+vault status || true
 
 if [ -f "vault-init.json" ]; then
     echo "vault-init.json already exists. This means Vault has already been initialized."
 
     # Check for --yes flag in arguments
-    if [[ "$*" == *"--yes"* ]] || [[ "$1" == "--yes" ]]; then
+    if [[ "$*" == *"--yes"* ]] || [[ "${1:-}" == "--yes" ]]; then
         echo "Proceeding with reinitialization (--yes flag provided)..."
     else
         read -p "Do you want to continue and reinitialize Vault? This will overwrite existing keys (y/N): " -n 1 -r
@@ -54,7 +55,14 @@ if [ -f "vault-init.json" ]; then
     fi
 fi
 
-vault operator init -format=json | tee vault-init.json
+# Write to a temp file so a failed init never clobbers the existing keys
+mkdir -p .tmp
+trap 'rm -f .tmp/vault-init.json.new' EXIT
+vault operator init -format=json > .tmp/vault-init.json.new
+# Keep the old unseal keys so snapshots from the previous cluster can still be restored
+./scripts/archive_vault_init.sh
+mv .tmp/vault-init.json.new vault-init.json
+cat vault-init.json
 sed -i '' "s/VAULT_TOKEN=.*/VAULT_TOKEN=$(jq -r '.root_token' vault-init.json)/g" .env
 echo "Waiting for Vault to initialise..."
 sleep 20

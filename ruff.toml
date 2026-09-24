@@ -1,0 +1,2 @@
+# Python lint/format settings (scripts/*.py); run with: uvx ruff check && uvx ruff format
+line-length = 200
