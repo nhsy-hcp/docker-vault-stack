@@ -15,10 +15,25 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "links": [],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "vault"
+      ],
+      "asDropdown": true,
+      "title": "Vault dashboards",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -1289,19 +1304,6 @@
           "legendFormat": "{{instance}} - {{quantile}}",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "vault_raft_fsm_apply{job=~\"$job\",cluster=~\"$cluster\",instance=~\"$instance\",quantile=~\"$quantile\"}",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "{{instance}} - {{quantile}}",
-          "range": true,
-          "refId": "B"
         }
       ],
       "title": "FSM Apply (Duration)",
@@ -1498,7 +1500,11 @@
   ],
   "refresh": "1m",
   "schemaVersion": 39,
-  "tags": [],
+  "tags": [
+    "vault",
+    "raft",
+    "prometheus"
+  ],
   "templating": {
     "list": [
       {
@@ -1630,5 +1636,6 @@
   "title": "Vault / Integrated Storage",
   "uid": "d8af4dd6a88d9c6a0f51146fe423cbc8",
   "version": 1,
-  "weekStart": ""
+  "weekStart": "",
+  "description": "Raft integrated storage: leadership, commits, FSM, RPC and storage operations (Prometheus)"
 }

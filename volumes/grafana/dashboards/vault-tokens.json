@@ -15,10 +15,25 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "links": [],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "vault"
+      ],
+      "asDropdown": true,
+      "title": "Vault dashboards",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
   "panels": [
     {
       "collapsed": false,
@@ -842,7 +857,11 @@
   ],
   "refresh": "1m",
   "schemaVersion": 39,
-  "tags": [],
+  "tags": [
+    "vault",
+    "tokens",
+    "prometheus"
+  ],
   "templating": {
     "list": [
       {
@@ -1055,5 +1074,6 @@
   "title": "Vault / Tokens",
   "uid": "6e69f82faea700018678bea9f8385766",
   "version": 1,
-  "weekStart": ""
+  "weekStart": "",
+  "description": "Vault token creation, counts and TTLs by namespace and auth method (Prometheus)"
 }

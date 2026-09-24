@@ -17,13 +17,16 @@ datasources:
     isDefault: true
     jsonData:
       graphiteVersion: "1.1"
+      # Match Alloy's default Vault scrape interval so $__rate_interval spans enough samples
+      timeInterval: "60s"
       tlsAuth: false
       tlsAuthWithCACert: false
     secureJsonData:
       tlsCACert: ""
       tlsClientCert: ""
       tlsClientKey: ""
-    version: 1
+    # Bump when changing settings: Grafana skips provisioning if its stored version is higher
+    version: 3
     editable: true
   - name: loki
     type: loki

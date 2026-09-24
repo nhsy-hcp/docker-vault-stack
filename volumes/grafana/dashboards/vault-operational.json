@@ -15,10 +15,25 @@
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "links": [],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "vault"
+      ],
+      "asDropdown": true,
+      "title": "Vault dashboards",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false,
+      "icon": "external link",
+      "tooltip": "",
+      "url": ""
+    }
+  ],
   "panels": [
     {
       "collapsed": false,
@@ -2826,7 +2841,7 @@
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "irate(vault_audit_sink_failure{job=~\"$job\",cluster=~\"$cluster\"}[$__rate_interval])",
+              "expr": "sum by (instance) (irate(vault_audit_log_request_failure{job=~\"$job\",cluster=~\"$cluster\"}[$__rate_interval])) + sum by (instance) (irate(vault_audit_log_response_failure{job=~\"$job\",cluster=~\"$cluster\"}[$__rate_interval]))",
               "format": "time_series",
               "instant": false,
               "legendFormat": "{{instance}}",
@@ -4994,7 +5009,11 @@
   ],
   "refresh": "1m",
   "schemaVersion": 39,
-  "tags": [],
+  "tags": [
+    "vault",
+    "operational",
+    "prometheus"
+  ],
   "templating": {
     "list": [
       {
@@ -5129,5 +5148,6 @@
   "title": "Vault / Operational",
   "uid": "1d61b55a3423da4e1fdb15a8ec3df89f",
   "version": 1,
-  "weekStart": ""
+  "weekStart": "",
+  "description": "Vault server health, request traffic, runtime, seal, replication and snapshots (Prometheus)"
 }
